@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme — Compose handles all the actual styling via EglooTheme.
+         This exists only to set the window chrome before Compose draws. -->
+    <style name="Theme.Egloo" parent="android:Theme.Material.NoActionBar">
+        <!-- Edge-to-edge: let Compose own the full window -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Dark background before Compose loads (matches NightDeep #0E1A2E) -->
+        <item name="android:windowBackground">@color/egloo_night_deep</item>
+    </style>
+</resources>
