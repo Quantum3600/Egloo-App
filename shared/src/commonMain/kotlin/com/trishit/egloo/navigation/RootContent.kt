@@ -84,15 +84,35 @@ fun AdaptiveRootContent(component: RootComponent) {
 
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val isDesktopLayout = maxWidth >= 600.dp
+                val isAuthOrOnboarding = activeChild is RootComponent.Child.OnboardingChild || 
+                                        activeChild is RootComponent.Child.LoginChild || 
+                                        activeChild is RootComponent.Child.SignUpChild
 
-                if (activeChild is RootComponent.Child.OnboardingChild) {
+                if (isAuthOrOnboarding) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        OnboardingScreen(
-                            onComplete = { component.navigateTo(Destination.Home) }
-                        )
+                        when (activeChild) {
+                            is RootComponent.Child.OnboardingChild -> {
+                                OnboardingScreen(
+                                    onComplete = { component.navigateTo(Destination.Login) }
+                                )
+                            }
+                            is RootComponent.Child.LoginChild -> {
+                                LoginScreen(
+                                    onLoginSuccess = { component.navigateTo(Destination.Home) },
+                                    onNavigateToSignUp = { component.navigateTo(Destination.SignUp) }
+                                )
+                            }
+                            is RootComponent.Child.SignUpChild -> {
+                                SignUpScreen(
+                                    onSignUpSuccess = { component.navigateTo(Destination.Login) },
+                                    onNavigateToLogin = { component.navigateTo(Destination.Login) }
+                                )
+                            }
+                            else -> {}
+                        }
                     }
                 } else {
                     if (isDesktopLayout) {
@@ -132,7 +152,9 @@ fun AdaptiveRootContent(component: RootComponent) {
                                                 is RootComponent.Child.SettingsChild -> SettingsScreen(
                                                     onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                                 )
-                                                is RootComponent.Child.OnboardingChild -> {}
+                                                is RootComponent.Child.OnboardingChild,
+                                                is RootComponent.Child.LoginChild,
+                                                is RootComponent.Child.SignUpChild -> {}
                                             }
                                         }
                                     }
@@ -163,7 +185,9 @@ fun AdaptiveRootContent(component: RootComponent) {
                                         is RootComponent.Child.SettingsChild -> SettingsScreen(
                                             onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                         )
-                                        is RootComponent.Child.OnboardingChild -> {} // handled above
+                                        is RootComponent.Child.OnboardingChild,
+                                        is RootComponent.Child.LoginChild,
+                                        is RootComponent.Child.SignUpChild -> {} // handled above
                                     }
                                 }
                             }
@@ -260,5 +284,7 @@ private fun RootComponent.Child.toDestination(): Destination? =
         is RootComponent.Child.TopicsChild -> Destination.Topics
         is RootComponent.Child.SourcesChild -> Destination.Sources
         is RootComponent.Child.SettingsChild -> Destination.Settings
-        is RootComponent.Child.OnboardingChild -> null
+        is RootComponent.Child.OnboardingChild,
+        is RootComponent.Child.LoginChild,
+        is RootComponent.Child.SignUpChild -> null
     }

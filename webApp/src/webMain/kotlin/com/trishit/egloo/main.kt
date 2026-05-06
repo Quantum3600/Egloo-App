@@ -11,14 +11,20 @@ import com.trishit.egloo.navigation.RootContent
 import org.koin.core.context.startKoin
 import web.storage.localStorage
 
+import com.trishit.egloo.data.repositories.AuthRepository
+import org.koin.mp.KoinPlatform.getKoin
+
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    startKoin { modules(eglooModule) }
+    val koinApp = startKoin { modules(eglooModule) }
+    val authRepo: AuthRepository = koinApp.koin.get()
+    
     val lifecycle = LifecycleRegistry()
     
     val root = DefaultRootComponent(
         componentContext = DefaultComponentContext(lifecycle),
         isFirstLaunch = wasmIsFirstLaunch(),
+        isAuthenticated = authRepo.getToken() != null,
         onOnboardingComplete = {
             localStorage.setItem("egloo_onboarding_done", "true")
         }

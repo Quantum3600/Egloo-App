@@ -1,6 +1,7 @@
 package com.trishit.egloo.di
 
 import com.russhwolf.settings.Settings
+import com.trishit.egloo.data.api.createHttpClient
 import com.trishit.egloo.domain.viewmodels.*
 import com.trishit.egloo.data.repositories.*
 import org.koin.core.module.dsl.factoryOf
@@ -20,8 +21,6 @@ val eglooModule = module {
 
     // ── Infrastructure ────────────────────────────────────────────────────────
     single<Settings> { 
-        // Using a simple map-backed implementation for commonMain if default constructor is not available
-        // In a real app, you'd use platform-specific providers
         object : Settings {
             private val map = mutableMapOf<String, Any>()
             override val keys: Set<String> get() = map.keys
@@ -50,14 +49,22 @@ val eglooModule = module {
         }
     }
 
+    single { 
+        createHttpClient("https://egloo-backend.onrender.com") { 
+            get<AuthRepository>().getToken() 
+        } 
+    }
+
     // ── Repositories ──────────────────────────────────────────────────────────
-    singleOf(::DummyDigestRepository)  bind DigestRepository::class
-    singleOf(::DummyChatRepository)    bind ChatRepository::class
-    singleOf(::DummyTopicsRepository)  bind TopicsRepository::class
-    singleOf(::DummySourcesRepository) bind SourcesRepository::class
+    single<AuthRepository> { KtorAuthRepository(get(), get()) }
+    single<DigestRepository> { KtorDigestRepository(get()) }
+    single<ChatRepository> { KtorChatRepository(get()) }
+    single<TopicsRepository> { KtorTopicsRepository(get()) }
+    single<SourcesRepository> { KtorSourcesRepository(get()) }
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
 
     // ── ViewModels ────────────────────────────────────────────────────────────
+    factoryOf(::AuthViewModel)
     factoryOf(::HomeViewModel)
     factoryOf(::ChatViewModel)
     factoryOf(::TopicsViewModel)

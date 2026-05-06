@@ -1,7 +1,7 @@
 package com.trishit.egloo.domain.models
 
+import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
-import kotlin.time.Instant
 
 // ─────────────────────────────────────────────
 //  Core domain models

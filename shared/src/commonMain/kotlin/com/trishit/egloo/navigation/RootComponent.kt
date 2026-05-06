@@ -12,6 +12,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface Destination {
     @Serializable data object Onboarding : Destination
+    @Serializable data object Login      : Destination
+    @Serializable data object SignUp     : Destination
     @Serializable data object Home       : Destination
     @Serializable data object Chat       : Destination
     @Serializable data object Topics     : Destination
@@ -31,6 +33,8 @@ interface RootComponent {
 
     sealed class Child {
         class OnboardingChild(val component: ComponentContext) : Child()
+        class LoginChild(val component: ComponentContext)      : Child()
+        class SignUpChild(val component: ComponentContext)     : Child()
         class HomeChild(val component: ComponentContext)       : Child()
         class ChatChild(val component: ComponentContext)       : Child()
         class TopicsChild(val component: ComponentContext)     : Child()
@@ -46,13 +50,17 @@ interface RootComponent {
 class DefaultRootComponent(
     componentContext: ComponentContext,
     private val isFirstLaunch: Boolean = true,
+    private val isAuthenticated: Boolean = false,
     private val onOnboardingComplete: () -> Unit = {},
 ) : RootComponent, ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Destination>()
 
-    private val startDestination: Destination =
-        if (isFirstLaunch) Destination.Onboarding else Destination.Home
+    private val startDestination: Destination = when {
+        isFirstLaunch -> Destination.Onboarding
+        !isAuthenticated -> Destination.Login
+        else -> Destination.Home
+    }
 
     override val stack: Value<ChildStack<*, RootComponent.Child>> =
         childStack(
@@ -68,6 +76,8 @@ class DefaultRootComponent(
         componentContext: ComponentContext,
     ): RootComponent.Child = when (destination) {
         Destination.Onboarding -> RootComponent.Child.OnboardingChild(componentContext)
+        Destination.Login      -> RootComponent.Child.LoginChild(componentContext)
+        Destination.SignUp     -> RootComponent.Child.SignUpChild(componentContext)
         Destination.Home       -> RootComponent.Child.HomeChild(componentContext)
         Destination.Chat       -> RootComponent.Child.ChatChild(componentContext)
         Destination.Topics     -> RootComponent.Child.TopicsChild(componentContext)

@@ -94,10 +94,16 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.compose.window.styler)
             implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.okhttp)
             implementation(libs.compose.window.styler)
+        }
+        jsMain.dependencies {
+            implementation(libs.wrappers.browser)
+            implementation(libs.ktor.client.js)
         }
         wasmJsMain.dependencies {
             implementation(libs.wrappers.browser)
+            implementation(libs.ktor.client.js)
         }
     }
 }

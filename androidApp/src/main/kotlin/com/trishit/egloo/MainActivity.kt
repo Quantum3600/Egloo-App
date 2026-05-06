@@ -11,14 +11,19 @@ import androidx.core.content.edit
 import com.trishit.egloo.navigation.DefaultRootComponent
 import com.trishit.egloo.navigation.RootContent
 
+import com.trishit.egloo.data.repositories.AuthRepository
+import org.koin.android.ext.android.get
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        val authRepo: AuthRepository = get()
         val root = DefaultRootComponent(
             componentContext = defaultComponentContext(),
             isFirstLaunch = isFirstLaunch(),
+            isAuthenticated = authRepo.getToken() != null,
             onOnboardingComplete = { markOnboardingDone() }
         )
         setContent {

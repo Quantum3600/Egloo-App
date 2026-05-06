@@ -22,9 +22,12 @@ import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
 import java.util.prefs.Preferences
 
+import com.trishit.egloo.data.repositories.AuthRepository
+
 fun main() = application {
     // ── DI ────────────────────────────────────────────────────────────────────
-    startKoin { modules(eglooModule) }
+    val koinApp = startKoin { modules(eglooModule) }
+    val authRepo: AuthRepository = koinApp.koin.get()
 
     // ── Decompose ─────────────────────────────────────────────────────────────
     val lifecycle = LifecycleRegistry()
@@ -32,6 +35,7 @@ fun main() = application {
         DefaultRootComponent(
             componentContext = DefaultComponentContext(lifecycle),
             isFirstLaunch = isFirstLaunch(),
+            isAuthenticated = authRepo.getToken() != null,
             onOnboardingComplete = { markOnboardingDone() }
         )
     }
