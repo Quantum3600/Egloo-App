@@ -1,5 +1,6 @@
 package com.trishit.egloo.domain.models
 
+import com.trishit.egloo.data.api.PdfUploadResponse
 import kotlinx.serialization.Serializable
 
 // ─────────────────────────────────────────────
@@ -117,6 +118,36 @@ data class SavedItem(
     val type: String, // "digest", "query", "topic", "item"
     val savedAt: String,
     val metadata: Map<String, String> = emptyMap()
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF Upload Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum class PdfUploadStatus {
+    PROCESSING, INDEXED, FAILED, PENDING
+}
+
+@Serializable
+data class UploadedPdf(
+    val id: String,
+    val filename: String,
+    val pages: Int,
+    val status: String,
+    val uploadedAt: String,
+    val fileSize: Long,
+    val errorMessage: String? = null
+)
+
+// Map from DTO
+fun PdfUploadResponse.toDomain() = UploadedPdf(
+    id = id,
+    filename = filename,
+    pages = pages,
+    status = status,
+    uploadedAt = uploaded_at,
+    fileSize = file_size,
+    errorMessage = error_message
 )
 
 @Serializable

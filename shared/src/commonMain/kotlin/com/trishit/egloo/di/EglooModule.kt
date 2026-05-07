@@ -63,6 +63,7 @@ val eglooModule = module {
     single<SourcesRepository> { KtorSourcesRepository(get()) }
     single<AvailableSourcesRepository> { KtorAvailableSourcesRepository(get()) }
     single<SavedRepository> { KtorSavedRepository(get()) }
+    single<PdfRepository> { KtorPdfRepository(get()) }
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
 
     // ── ViewModels ────────────────────────────────────────────────────────────

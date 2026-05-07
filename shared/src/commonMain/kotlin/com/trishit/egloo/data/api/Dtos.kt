@@ -322,3 +322,37 @@ fun AvailableSourceDto.toDomain() = AvailableSource(
     description = description,
     requiresAuth = requires_auth
 )
+
+fun PdfUploadResponse.toDomain() = UploadedPdf(
+    id = id,
+    filename = filename,
+    pages = pages,
+    status = status,
+    uploadedAt = uploaded_at,
+    fileSize = file_size,
+    errorMessage = error_message
+)
+
+// ── PDF Upload DTOs ──────────────────────────────────────────────────────────
+
+@Serializable
+data class PdfUploadResponse(
+    val id: String,
+    val filename: String,
+    val pages: Int,
+    val status: String,  // "processing", "indexed", "failed"
+    val uploaded_at: String,
+    val file_size: Long,
+    val error_message: String? = null
+)
+
+@Serializable
+data class PdfListResponse(
+    val pdfs: List<PdfUploadResponse>,
+    val total: Int
+)
+
+@Serializable
+data class PdfDeleteRequest(
+    val pdf_id: String
+)

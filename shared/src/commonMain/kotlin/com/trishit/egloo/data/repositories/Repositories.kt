@@ -55,6 +55,13 @@ interface SavedRepository {
     suspend fun unsaveItem(id: String): Result<Unit>
 }
 
+interface PdfRepository {
+    fun getUploadedPdfs(): Flow<List<UploadedPdf>>
+    suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf>
+    suspend fun deletePdf(pdfId: String): Result<Unit>
+    suspend fun reindexPdf(pdfId: String): Result<Unit>
+}
+
 // ── Result wrappers ───────────────────────────────────────────────────────────
 
 sealed class DigestResult {
