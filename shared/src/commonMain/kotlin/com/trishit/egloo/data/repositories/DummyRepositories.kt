@@ -2,8 +2,12 @@ package com.trishit.egloo.data.repositories
 
 import com.trishit.egloo.data.dummy.DummyData
 import com.trishit.egloo.domain.models.*
+import com.trishit.egloo.platform.currentTimeMillis
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dummy implementations
@@ -25,9 +29,9 @@ class DummyChatRepository : ChatRepository {
     override fun getChatHistory(): Flow<List<ChatMessage>> = _messages.asStateFlow()
 
     override suspend fun sendMessage(text: String) {
-        val now = kotlin.time.Clock.System.now()
+        val now = currentTimeMillis()
         val userMsg = ChatMessage.User(
-            id = "u_${now.toEpochMilliseconds()}",
+            id = "u_$now",
             text = text,
             sentAt = now,
         )
@@ -35,7 +39,7 @@ class DummyChatRepository : ChatRepository {
 
         // Simulate Pingo thinking
         val thinkingMsg = ChatMessage.Pingo(
-            id = "p_${now.toEpochMilliseconds() + 1}",
+            id = "p_${now + 1}",
             text = "",
             isStreaming = true,
             sentAt = now,
@@ -82,23 +86,42 @@ class DummyChatRepository : ChatRepository {
                 )
         }
         return ChatMessage.Pingo(
-            id = "p_${kotlin.time.Clock.System.now().toEpochMilliseconds()}",
+            id = "p_${currentTimeMillis()}",
             text = text,
             sources = sources,
             isStreaming = false,
-            sentAt = kotlin.time.Clock.System.now(),
+            sentAt = currentTimeMillis(),
         )
     }
 }
 
 class DummyTopicsRepository : TopicsRepository {
-    override fun getTopics(): Flow<List<Topic>> = flow {
-        delay(400)
-        emit(DummyData.dummyTopics)
-    }
+    private val _topics = MutableStateFlow(DummyData.dummyTopics)
+
+    override fun getTopics(): Flow<List<Topic>> = _topics.asStateFlow()
 
     override fun getTopicById(id: String): Flow<Topic?> = flow {
-        emit(DummyData.dummyTopics.find { it.id == id })
+        emit(_topics.value.find { it.id == id })
+    }
+
+    override suspend fun createTopic(name: String, summary: String): Result<Unit> {
+        delay(800)
+        val newTopic = Topic(
+            id = "t_${currentTimeMillis()}",
+            title = name,
+            summary = summary,
+            itemCount = 0,
+            sources = emptyList(),
+            lastUpdatedAt = "Just now",
+            color = TopicColor.CORAL
+        )
+        _topics.value = listOf(newTopic) + _topics.value
+        return Result.success(Unit)
+    }
+
+    override suspend fun triggerTopicGeneration(): Result<Unit> {
+        delay(2000)
+        return Result.success(Unit)
     }
 }
 
@@ -109,7 +132,7 @@ class DummySourcesRepository : SourcesRepository {
 
     override suspend fun connectSource(type: SourceType) {
         delay(1500) // simulate OAuth
-        val now = kotlin.time.Clock.System.now().toEpochMilliseconds().toString()
+        val now = currentTimeMillis().toString()
         _sources.value = _sources.value.map { source ->
             if (source.type == type) source.copy(isConnected = true, lastSyncedAt = now, itemCount = 42)
             else source
@@ -131,5 +154,25 @@ class DummySettingsRepository : SettingsRepository {
 
     override suspend fun updateSettings(settings: AppSettings) {
         _settings.value = settings
+    }
+}
+
+class DummySavedRepository : SavedRepository {
+    private val _saved = MutableStateFlow<List<SavedItem>>(emptyList())
+    override fun getSavedItems(): Flow<List<SavedItem>> = _saved.asStateFlow()
+    override suspend fun saveItem(id: String, type: String): Result<Unit> {
+        val item = SavedItem(id, "Saved $type", "Summary of $type", type, "Now")
+        _saved.value = _saved.value + item
+        return Result.success(Unit)
+    }
+    override suspend fun unsaveItem(id: String): Result<Unit> {
+        _saved.value = _saved.value.filter { it.id != id }
+        return Result.success(Unit)
+    }
+}
+
+class DummyAvailableSourcesRepository : AvailableSourcesRepository {
+    override fun getAvailableSources(): Flow<List<AvailableSource>> = flow {
+        emit(DummyData.availableSources)
     }
 }

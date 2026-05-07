@@ -1,7 +1,11 @@
 package com.trishit.egloo.data.api
 
 import com.trishit.egloo.domain.models.*
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import kotlin.time.*
+import kotlin.time.Clock
 
 // ── Auth DTOs ───────────────────────────────────────────────────────────────
 
@@ -9,7 +13,7 @@ import kotlinx.serialization.Serializable
 data class UserRegisterRequest(
     val email: String,
     val password: String,
-    val full_name: String
+    val full_name: String? = null
 )
 
 @Serializable
@@ -22,27 +26,33 @@ data class UserLoginRequest(
 data class TokenResponse(
     val access_token: String,
     val refresh_token: String,
-    val token_type: String
+    val token_type: String = "bearer"
 )
 
 @Serializable
 data class UserResponse(
     val id: String,
     val email: String,
-    val full_name: String,
-    val is_active: Boolean
+    val full_name: String?,
+    val is_active: Boolean,
+    val created_at: String
 )
 
 // ── Digest DTOs ──────────────────────────────────────────────────────────────
 
 @Serializable
 data class DigestResponse(
-    val id: String,
-    val date_label: String,
-    val greeting: String,
-    val pingo_message: String,
-    val total_item_count: Int,
-    val sections: List<DigestSectionDto>
+    val id: String? = null,
+    val date: String? = null,
+    val date_label: String? = null,
+    val greeting: String? = null,
+    val pingo_message: String? = null,
+    val summary_text: String? = null,
+    val total_item_count: Int? = null,
+    val sections: List<DigestSectionDto>? = emptyList(),
+    val action_items: List<String>? = emptyList(),
+    val topics: List<TopicResponse>? = emptyList(),
+    val created_at: String? = null
 )
 
 @Serializable
@@ -77,62 +87,160 @@ data class ActionItemDto(
 @Serializable
 data class TopicResponse(
     val id: String,
-    val title: String,
-    val summary: String,
-    val item_count: Int,
-    val sources: List<String>,
-    val last_updated_at: String,
-    val color: String
+    val name: String,
+    val summary: String? = "",
+    val source_types: List<String>? = emptyList(),
+    val item_count: Int = 0,
+    val last_refreshed_at: String? = null,
+    val created_at: String? = null
+)
+
+@Serializable
+data class TopicListResponse(
+    val topics: List<TopicResponse>,
+    val total: Int
 )
 
 // ── Sources DTOs ─────────────────────────────────────────────────────────────
 
 @Serializable
-data class ConnectedSourceDto(
+data class AvailableSourceDto(
     val id: String,
-    val type: String,
-    val account_name: String,
-    val is_connected: Boolean,
+    val name: String,
+    val display_name: String,
+    val icon: String,
+    val description: String,
+    val requires_auth: Boolean = true
+)
+
+@Serializable
+data class AvailableSourceListResponse(
+    val sources: List<AvailableSourceDto>,
+    val total: Int
+)
+
+@Serializable
+data class SourceResponse(
+    val id: String,
+    val source_type: String,
+    val sync_status: String,
     val last_synced_at: String? = null,
-    val item_count: Int = 0
+    val created_at: String
+)
+
+@Serializable
+data class SourceListResponse(
+    val sources: List<SourceResponse>,
+    val total: Int
 )
 
 // ── Chat DTOs ────────────────────────────────────────────────────────────────
 
 @Serializable
 data class AskRequest(
-    val question: String
+    val question: String,
+    val use_cache: Boolean = true
 )
 
 @Serializable
 data class AskResponse(
     val answer: String,
-    val citations: List<CitationDto> = emptyList()
+    val sources: List<SourceCitationDto> = emptyList(),
+    val model_used: String? = null,
+    val chunks_retrieved: Int = 0,
+    val cached: Boolean = false,
+    val question: String? = null
 )
 
 @Serializable
-data class CitationDto(
-    val source_id: String,
-    val source_name: String,
-    val snippet: String
+data class SourceCitationDto(
+    val document_id: String,
+    val source_type: String,
+    val sender: String? = "",
+    val subject: String? = "",
+    val timestamp: String? = "",
+    val content_preview: String,
+    val similarity: Float? = 0f
 )
 
 @Serializable
-data class ChatChunkDto(
-    val delta: String,
-    val done: Boolean,
-    val citations: List<CitationDto>? = null
+data class ChatEventDto(
+    val type: String,
+    val token: String? = null,
+    val sources: List<SourceCitationDto>? = null,
+    val model: String? = null
+)
+
+// ── Saved Items DTOs ─────────────────────────────────────────────────────────
+
+@Serializable
+data class SaveItemRequest(
+    val item_id: String,
+    val item_type: String
+)
+
+@Serializable
+data class SavedItemResponse(
+    val id: String,
+    val title: String,
+    val summary: String,
+    val item_type: String,
+    val saved_at: String,
+    val metadata: Map<String, String> = emptyMap()
+)
+
+@Serializable
+data class SavedListResponse(
+    val items: List<SavedItemResponse>,
+    val total: Int
 )
 
 // ── Mappers ──────────────────────────────────────────────────────────────────
 
-fun DigestResponse.toDomain() = DailyDigest(
-    dateLabel = date_label,
-    greeting = greeting,
-    pingoMessage = pingo_message,
-    totalItemCount = total_item_count,
-    sections = sections.map { it.toDomain() }
-)
+fun DigestResponse.toDomain(): DailyDigest {
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    
+    val derivedDateLabel = date_label ?: date ?: let {
+        val month = now.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        val day = now.dayOfMonth
+        val dayOfWeek = now.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+        "$dayOfWeek, $month $day"
+    }
+    
+    val derivedGreeting = greeting ?: let {
+        when (now.hour) {
+            in 0..11 -> "Good morning, User"
+            in 12..17 -> "Good afternoon, User"
+            else -> "Good evening, User"
+        }
+    }
+    
+    val derivedPingoMessage = pingo_message ?: summary_text ?: "I've analyzed your latest data."
+    val derivedTotalCount = total_item_count ?: sections?.sumOf { it.items.size } ?: 0
+    
+    // If backend sends topics instead of sections, we might need to convert
+    val domainSections = if (sections.isNullOrEmpty() && !topics.isNullOrEmpty()) {
+        listOf(DigestSection(
+            title = "Insights",
+            subtitle = "From your knowledge base",
+            items = emptyList(), 
+            actionItems = action_items?.map { ActionItem(id = it, text = it, sourceType = SourceType.MANUAL) } ?: emptyList()
+        ))
+    } else {
+        sections?.map { it.toDomain() } ?: emptyList()
+    }
+
+    return DailyDigest(
+        id = id ?: "",
+        dateLabel = derivedDateLabel,
+        greeting = derivedGreeting,
+        pingoMessage = derivedPingoMessage,
+        summaryText = summary_text ?: "",
+        totalItemCount = derivedTotalCount,
+        sections = domainSections,
+        topics = topics?.map { it.toDomain() } ?: emptyList()
+    )
+}
 
 fun DigestSectionDto.toDomain() = DigestSection(
     title = title,
@@ -145,7 +253,7 @@ fun KnowledgeItemDto.toDomain() = KnowledgeItem(
     id = id,
     title = title,
     summary = summary,
-    sourceType = SourceType.valueOf(source_type.uppercase()),
+    sourceType = try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL },
     sourceName = source_name,
     timestamp = timestamp,
     tags = tags
@@ -154,25 +262,63 @@ fun KnowledgeItemDto.toDomain() = KnowledgeItem(
 fun ActionItemDto.toDomain() = ActionItem(
     id = id,
     text = text,
-    sourceType = SourceType.valueOf(source_type.uppercase()),
+    sourceType = try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL },
     isCompleted = is_completed
 )
 
 fun TopicResponse.toDomain() = Topic(
     id = id,
-    title = title,
-    summary = summary,
+    title = name,
+    summary = summary ?: "",
     itemCount = item_count,
-    sources = sources.map { SourceType.valueOf(it.uppercase()) },
-    lastUpdatedAt = last_updated_at,
-    color = try { TopicColor.valueOf(color.uppercase()) } catch (e: Exception) { TopicColor.TEAL }
+    sources = source_types?.map { type ->
+        try { SourceType.valueOf(type.uppercase()) } catch (e: Exception) { SourceType.MANUAL }
+    } ?: emptyList(),
+    lastUpdatedAt = last_refreshed_at ?: created_at ?: "",
+    color = TopicColor.TEAL
 )
 
-fun ConnectedSourceDto.toDomain() = ConnectedSource(
+fun SourceResponse.toDomain() = ConnectedSource(
     id = id,
-    type = SourceType.valueOf(type.uppercase()),
-    accountName = account_name,
-    isConnected = is_connected,
+    type = try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL },
+    accountName = source_type.replaceFirstChar { it.uppercase() },
+    isConnected = sync_status == "success" || sync_status == "syncing",
     lastSyncedAt = last_synced_at,
-    itemCount = item_count
+    itemCount = 0
+)
+
+fun AskResponse.toDomain(id: String, sentAt: Long) = ChatMessage.Pingo(
+    id = id,
+    text = answer,
+    sentAt = sentAt,
+    sources = sources.map { ChatSource(it.source_name_fallback(), it.source_type_to_domain()) },
+    isStreaming = false,
+    modelUsed = model_used,
+    sourcesRetrieved = chunks_retrieved
+)
+
+fun SourceCitationDto.source_name_fallback(): String {
+    return sender?.takeIf { it.isNotBlank() } ?: subject?.takeIf { it.isNotBlank() } ?: "Source"
+}
+
+fun SourceCitationDto.source_type_to_domain(): SourceType {
+    return try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL }
+}
+
+fun SavedItemResponse.toDomain() = SavedItem(
+    id = id,
+    title = title,
+    summary = summary,
+    type = item_type,
+    savedAt = saved_at,
+    metadata = metadata
+)
+
+fun AvailableSourceDto.toDomain() = AvailableSource(
+    id = id,
+    name = name,
+    displayName = display_name,
+    icon = icon,
+    description = description,
+    requiresAuth = requires_auth
 )

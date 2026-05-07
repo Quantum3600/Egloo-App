@@ -2,6 +2,7 @@ package com.trishit.egloo.domain.viewmodels
 
 import com.trishit.egloo.data.repositories.*
 import com.trishit.egloo.domain.models.*
+import com.trishit.egloo.platform.DeepLinkHandler
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -85,8 +86,10 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
 
 data class TopicsUiState(
     val isLoading: Boolean = true,
+    val isGenerating: Boolean = false,
     val topics: List<Topic> = emptyList(),
     val selectedTopic: Topic? = null,
+    val error: String? = null
 )
 
 class TopicsViewModel(private val topicsRepo: TopicsRepository) : BaseViewModel() {
@@ -95,7 +98,12 @@ class TopicsViewModel(private val topicsRepo: TopicsRepository) : BaseViewModel(
     val uiState: StateFlow<TopicsUiState> = _uiState.asStateFlow()
 
     init {
+        loadTopics()
+    }
+
+    fun loadTopics() {
         scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             topicsRepo.getTopics().collect { topics ->
                 _uiState.update { it.copy(isLoading = false, topics = topics) }
             }
@@ -105,38 +113,170 @@ class TopicsViewModel(private val topicsRepo: TopicsRepository) : BaseViewModel(
     fun selectTopic(topic: Topic?) {
         _uiState.update { it.copy(selectedTopic = topic) }
     }
+
+    fun createTopic(name: String, summary: String) {
+        scope.launch {
+            topicsRepo.createTopic(name, summary).onSuccess {
+                loadTopics()
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun generateTopics() {
+        scope.launch {
+            _uiState.update { it.copy(isGenerating = true) }
+            topicsRepo.triggerTopicGeneration().onSuccess {
+                // Poll for updates or just refresh after a delay in dummy mode
+                delay(3000)
+                loadTopics()
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message) }
+            }
+            _uiState.update { it.copy(isGenerating = false) }
+        }
+    }
 }
 
 // ── Sources ───────────────────────────────────────────────────────────────────
 
 data class SourcesUiState(
-    val sources: List<ConnectedSource> = emptyList(),
-    val connectingType: SourceType? = null,
+    val availableSources: List<AvailableSource> = emptyList(),
+    val connectedSources: List<ConnectedSource> = emptyList(),
+    val sourceRows: List<SourceRowData> = emptyList(),
+    val connectingSourceId: String? = null,
+    val authMessage: String? = null,
+    val authMessageType: AuthMessageType? = null,
 )
 
-class SourcesViewModel(private val sourcesRepo: SourcesRepository) : BaseViewModel() {
+enum class AuthMessageType {
+    SUCCESS, ERROR
+}
+
+class SourcesViewModel(
+    private val availableSourcesRepo: AvailableSourcesRepository,
+    private val connectedSourcesRepo: SourcesRepository
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(SourcesUiState())
     val uiState: StateFlow<SourcesUiState> = _uiState.asStateFlow()
 
     init {
+        // Load available sources (global)
         scope.launch {
-            sourcesRepo.getConnectedSources().collect { sources ->
-                _uiState.update { it.copy(sources = sources) }
+            availableSourcesRepo.getAvailableSources().collect { available ->
+                _uiState.update { it.copy(availableSources = available) }
+                mergeSourceData()
+            }
+        }
+
+        // Load connected sources (user-specific)
+        scope.launch {
+            connectedSourcesRepo.getConnectedSources().collect { connected ->
+                _uiState.update { it.copy(connectedSources = connected) }
+                mergeSourceData()
+            }
+        }
+
+        // Listen for deep link results
+        scope.launch {
+            DeepLinkHandler.authResultFlow.collect { result ->
+                handleAuthResult(result)
             }
         }
     }
 
-    fun connectSource(type: SourceType) {
-        _uiState.update { it.copy(connectingType = type) }
+    private fun mergeSourceData() {
+        val state = _uiState.value
+        val rows = state.availableSources.map { available ->
+            val connected = state.connectedSources.find { 
+                it.type.name.lowercase() == available.id.lowercase().replace("_", "")
+                    || it.type.displayName.lowercase() == available.displayName.lowercase()
+            }
+            SourceRowData(
+                availableSource = available,
+                connectedSource = connected,
+                isConnected = connected?.isConnected ?: false,
+                itemCount = connected?.itemCount ?: 0,
+                accountName = connected?.accountName ?: "",
+                lastSyncedAt = connected?.lastSyncedAt,
+                sourceId = available.id
+            )
+        }
+        _uiState.update { it.copy(sourceRows = rows) }
+    }
+
+    fun connectSource(sourceId: String) {
+        _uiState.update { it.copy(connectingSourceId = sourceId) }
         scope.launch {
-            sourcesRepo.connectSource(type)
-            _uiState.update { it.copy(connectingType = null) }
+            val sourceType = mapSourceIdToType(sourceId)
+            if (sourceType != null) {
+                connectedSourcesRepo.connectSource(sourceType)
+            }
+            _uiState.update { it.copy(connectingSourceId = null) }
         }
     }
 
     fun disconnectSource(id: String) {
-        scope.launch { sourcesRepo.disconnectSource(id) }
+        scope.launch { connectedSourcesRepo.disconnectSource(id) }
+    }
+
+    private fun mapSourceIdToType(sourceId: String): SourceType? {
+        return when (sourceId) {
+            "gmail" -> SourceType.GMAIL
+            "slack" -> SourceType.SLACK
+            "google_drive" -> SourceType.GOOGLE_DRIVE
+            "notion" -> SourceType.NOTION
+            "pdf" -> SourceType.PDF
+            else -> null
+        }
+    }
+
+    private fun handleAuthResult(result: DeepLinkHandler.AuthDeepLinkResult) {
+        val messageType = if (result.status == "success") AuthMessageType.SUCCESS else AuthMessageType.ERROR
+        val sourceName = when (result.source) {
+            "gmail" -> "Gmail"
+            "slack" -> "Slack"
+            "google_drive" -> "Google Drive"
+            "notion" -> "Notion"
+            "pdf" -> "PDF"
+            else -> result.source.replaceFirstChar { it.uppercase() }
+        }
+        val message = if (result.status == "success") {
+            "Successfully connected $sourceName!"
+        } else {
+            "Failed to connect $sourceName. Please try again."
+        }
+
+        _uiState.update {
+            it.copy(
+                authMessage = message,
+                authMessageType = messageType,
+                connectingSourceId = null
+            )
+        }
+
+        // Clear message after 3 seconds
+        scope.launch {
+            delay(3000)
+            _uiState.update { it.copy(authMessage = null, authMessageType = null) }
+        }
+
+        // Refresh sources list on success
+        if (result.status == "success") {
+            scope.launch {
+                delay(1000)
+                connectedSourcesRepo.getConnectedSources().collect { sources ->
+                    _uiState.update { it.copy(connectedSources = sources) }
+                    mergeSourceData()
+                }
+            }
+        }
+    }
+
+    fun clearAuthMessage() {
+        _uiState.update { it.copy(authMessage = null, authMessageType = null) }
     }
 }
 
@@ -173,6 +313,40 @@ class SettingsViewModel(private val settingsRepo: SettingsRepository) : BaseView
             _uiState.update { it.copy(isSaved = true) }
             delay(1500)
             _uiState.update { it.copy(isSaved = false) }
+        }
+    }
+}
+
+// ── Saved ────────────────────────────────────────────────────────────────────
+
+data class SavedUiState(
+    val isLoading: Boolean = false,
+    val items: List<SavedItem> = emptyList(),
+    val error: String? = null
+)
+
+class SavedViewModel(private val repository: SavedRepository) : BaseViewModel() {
+    private val _uiState = MutableStateFlow(SavedUiState())
+    val uiState: StateFlow<SavedUiState> = _uiState.asStateFlow()
+
+    init {
+        loadSavedItems()
+    }
+
+    fun loadSavedItems() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            repository.getSavedItems().collect { items ->
+                _uiState.update { it.copy(isLoading = false, items = items) }
+            }
+        }
+    }
+
+    fun unsaveItem(id: String) {
+        scope.launch {
+            repository.unsaveItem(id).onSuccess {
+                loadSavedItems()
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import com.trishit.egloo.data.api.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.*
 
@@ -37,7 +38,8 @@ class KtorAuthRepository(
                 _isAuthenticated.value = true
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Login failed: ${response.status}"))
+                val errorMsg = try { response.bodyAsText() } catch (e: Exception) { response.status.description }
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
             Result.failure(e)

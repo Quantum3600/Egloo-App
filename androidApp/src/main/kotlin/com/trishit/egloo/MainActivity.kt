@@ -8,16 +8,21 @@ import androidx.compose.runtime.Composable
 import com.arkivanov.decompose.defaultComponentContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
 import com.trishit.egloo.navigation.DefaultRootComponent
 import com.trishit.egloo.navigation.RootContent
 
 import com.trishit.egloo.data.repositories.AuthRepository
+import com.trishit.egloo.platform.DeepLinkHandler
 import org.koin.android.ext.android.get
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        handleIntent(intent)
 
         val authRepo: AuthRepository = get()
         val root = DefaultRootComponent(
@@ -29,6 +34,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             org.koin.compose.KoinContext {
                 RootContent(component = root)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+        val uri = intent?.data
+        if (uri != null && uri.scheme == "egloo" && uri.host == "auth") {
+            val status = uri.getQueryParameter("status")
+            val source = uri.getQueryParameter("source")
+            
+            lifecycleScope.launch {
+                DeepLinkHandler.emitAuthResult(status, source)
             }
         }
     }

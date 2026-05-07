@@ -16,13 +16,13 @@ import androidx.compose.ui.unit.*
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.domain.viewmodels.*
 import com.trishit.egloo.ui.components.*
-import kotlinx.datetime.*
 import org.koin.compose.koinInject
+import kotlinx.datetime.*
 import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(
+fun PingoScreen(
     viewModel: ChatViewModel = koinInject(),
     onNavigateBack: () -> Unit = {},
 ) {
@@ -53,7 +53,7 @@ fun ChatScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Chat with Pingo", style = MaterialTheme.typography.titleMedium)
+                            Text("Pingo", style = MaterialTheme.typography.titleMedium)
                             Text("AI Assistant", style = MaterialTheme.typography.labelSmall)
                         }
                     }
@@ -121,19 +121,42 @@ fun MessageBubble(message: ChatMessage) {
                     style = MaterialTheme.typography.bodyMedium
                 )
                 
-                if (message is ChatMessage.Pingo && message.sources.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Sources:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = textColor.copy(alpha = 0.7f)
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        message.sources.forEach { source ->
-                            SourceTag(source)
+                if (message is ChatMessage.Pingo) {
+                    if (message.sources.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Sources:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = textColor.copy(alpha = 0.7f)
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            message.sources.forEach { source ->
+                                SourceTag(source)
+                            }
+                        }
+                    }
+
+                    // Metadata (Integrity Check)
+                    if (!message.isStreaming && (message.modelUsed != null || message.sourcesRetrieved > 0)) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            message.modelUsed?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = textColor.copy(alpha = 0.5f)
+                                )
+                            }
+                            if (message.sourcesRetrieved > 0) {
+                                Text(
+                                    text = "${message.sourcesRetrieved} sources",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = textColor.copy(alpha = 0.5f)
+                                )
+                            }
                         }
                     }
                 }
@@ -230,7 +253,8 @@ fun TypingIndicator() {
     }
 }
 
-private fun formatTime(instant: Instant): String {
+private fun formatTime(sentAt: Long): String {
+    val instant = Instant.fromEpochMilliseconds(sentAt)
     val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return "${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
 }

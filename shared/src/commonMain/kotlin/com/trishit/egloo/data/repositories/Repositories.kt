@@ -29,6 +29,8 @@ interface ChatRepository {
 interface TopicsRepository {
     fun getTopics(): Flow<List<Topic>>
     fun getTopicById(id: String): Flow<Topic?>
+    suspend fun createTopic(name: String, summary: String): Result<Unit>
+    suspend fun triggerTopicGeneration(): Result<Unit>
 }
 
 interface SourcesRepository {
@@ -38,9 +40,19 @@ interface SourcesRepository {
     suspend fun disconnectSource(id: String)
 }
 
+interface AvailableSourcesRepository {
+    fun getAvailableSources(): Flow<List<AvailableSource>>
+}
+
 interface SettingsRepository {
     fun getSettings(): Flow<AppSettings>
     suspend fun updateSettings(settings: AppSettings)
+}
+
+interface SavedRepository {
+    fun getSavedItems(): Flow<List<SavedItem>>
+    suspend fun saveItem(id: String, type: String): Result<Unit>
+    suspend fun unsaveItem(id: String): Result<Unit>
 }
 
 // ── Result wrappers ───────────────────────────────────────────────────────────

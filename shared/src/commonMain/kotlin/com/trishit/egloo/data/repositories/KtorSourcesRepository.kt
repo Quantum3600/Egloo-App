@@ -1,6 +1,7 @@
 package com.trishit.egloo.data.repositories
 
-import com.trishit.egloo.data.api.ConnectedSourceDto
+import com.trishit.egloo.data.api.SourceListResponse
+import com.trishit.egloo.data.api.SourceResponse
 import com.trishit.egloo.data.api.toDomain
 import com.trishit.egloo.domain.models.ConnectedSource
 import com.trishit.egloo.domain.models.SourceType
@@ -16,8 +17,8 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
         try {
             val response = client.get("/api/v1/sources")
             if (response.status.value == 200) {
-                val dtos = response.body<List<ConnectedSourceDto>>()
-                emit(dtos.map { it.toDomain() })
+                val listResponse = response.body<SourceListResponse>()
+                emit(listResponse.sources.map { it.toDomain() })
             } else {
                 emit(emptyList())
             }
@@ -43,9 +44,9 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
 
     override suspend fun disconnectSource(id: String) {
         try {
-            // Based on guideline: DELETE /sources/{id}
-            // But openapi says DELETE /api/v1/sources/{source_type}
-            // I'll use the id for now, or map it to type.
+            // Based on API_DOCS.json: DELETE /api/v1/sources/{type}
+            // The 'id' passed here is expected to be the source type string or we should map it.
+            // For now, assuming 'id' is the type or can be used as such.
             client.delete("/api/v1/sources/$id")
         } catch (e: Exception) {
             // Handle error

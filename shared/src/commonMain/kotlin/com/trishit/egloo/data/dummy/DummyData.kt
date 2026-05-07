@@ -41,6 +41,7 @@ object DummyData {
     )
 
     val dummyDigest = DailyDigest(
+        id = "d_today",
         dateLabel = "Friday, May 2",
         greeting = "Good morning, User",
         pingoMessage = "I've analyzed 12 new messages since yesterday. The database migration is the hot topic in Slack today.",
@@ -128,5 +129,48 @@ object DummyData {
         pingoGreetingsEnabled = true,
         digestNotificationsEnabled = true,
         syncFrequencyHours = 4
+    )
+
+    val availableSources = listOf(
+        AvailableSource(
+            id = "gmail",
+            name = "Gmail",
+            displayName = "Gmail",
+            icon = "https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_512dp.png",
+            description = "Read your emails and attachments",
+            requiresAuth = true
+        ),
+        AvailableSource(
+            id = "slack",
+            name = "Slack",
+            displayName = "Slack",
+            icon = "https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png",
+            description = "Sync messages and files from Slack",
+            requiresAuth = true
+        ),
+        AvailableSource(
+            id = "google_drive",
+            name = "Google Drive",
+            displayName = "Google Drive",
+            icon = "https://www.gstatic.com/images/branding/product/1x/drive_2020q4_512dp.png",
+            description = "Index documents and PDFs",
+            requiresAuth = true
+        ),
+        AvailableSource(
+            id = "notion",
+            name = "Notion",
+            displayName = "Notion",
+            icon = "https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg",
+            description = "Connect to your Notion workspace",
+            requiresAuth = true
+        ),
+        AvailableSource(
+            id = "pdf",
+            name = "PDF Upload",
+            displayName = "Upload PDFs",
+            icon = "https://www.adobe.com/content/dam/cc/icons/pdf.svg",
+            description = "Upload PDF documents manually",
+            requiresAuth = false
+        )
     )
 }

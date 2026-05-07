@@ -39,22 +39,22 @@ private val navItems = listOf(
         Destination.Home
     ),
     NavItem(
-        "Chat",
+        "Pingo",
+        Icons.Default.Search, // Using Search icon for Pingo as per previous Chat icon
         Icons.Default.Search,
-        Icons.Default.Search,
-        Destination.Chat
+        Destination.Pingo
     ),
     NavItem(
-        "Topics",
-        Icons.AutoMirrored.Filled.List,
-        Icons.AutoMirrored.Filled.List,
-        Destination.Topics
+        "Egloos",
+        Icons.Default.Cloud,
+        Icons.Default.Cloud,
+        Destination.Egloos
     ),
     NavItem(
-        "Sources",
-        Icons.Default.AccountBox,
-        Icons.Default.AccountBox,
-        Destination.Sources
+        "Saved",
+        Icons.Default.Favorite,
+        Icons.Default.Favorite,
+        Destination.Saved
     ),
     NavItem(
         "Settings",
@@ -144,17 +144,15 @@ fun AdaptiveRootContent(component: RootComponent) {
                                             modifier = Modifier.fillMaxSize(),
                                             color = MaterialTheme.colorScheme.background
                                         ) {
-                                            when (child.instance) {
+                                            when (val instance = child.instance) {
                                                 is RootComponent.Child.HomeChild -> HomeScreen()
-                                                is RootComponent.Child.ChatChild -> ChatScreen()
-                                                is RootComponent.Child.TopicsChild -> TopicsScreen()
-                                                is RootComponent.Child.SourcesChild -> SourcesScreen()
+                                                is RootComponent.Child.PingoChild -> PingoScreen()
+                                                is RootComponent.Child.EgloosChild -> EgloosScreen()
+                                                is RootComponent.Child.SavedChild -> SavedItemsScreen()
                                                 is RootComponent.Child.SettingsChild -> SettingsScreen(
                                                     onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                                 )
-                                                is RootComponent.Child.OnboardingChild,
-                                                is RootComponent.Child.LoginChild,
-                                                is RootComponent.Child.SignUpChild -> {}
+                                                else -> {}
                                             }
                                         }
                                     }
@@ -179,15 +177,13 @@ fun AdaptiveRootContent(component: RootComponent) {
                                 ) { child ->
                                     when (val instance = child.instance) {
                                         is RootComponent.Child.HomeChild -> HomeScreen()
-                                        is RootComponent.Child.ChatChild -> ChatScreen()
-                                        is RootComponent.Child.TopicsChild -> TopicsScreen()
-                                        is RootComponent.Child.SourcesChild -> SourcesScreen()
+                                        is RootComponent.Child.PingoChild -> PingoScreen()
+                                        is RootComponent.Child.EgloosChild -> EgloosScreen()
+                                        is RootComponent.Child.SavedChild -> SavedItemsScreen()
                                         is RootComponent.Child.SettingsChild -> SettingsScreen(
                                             onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                         )
-                                        is RootComponent.Child.OnboardingChild,
-                                        is RootComponent.Child.LoginChild,
-                                        is RootComponent.Child.SignUpChild -> {} // handled above
+                                        else -> {}
                                     }
                                 }
                             }
@@ -273,18 +269,14 @@ fun EglooNavRail(
     }
 }
 
-// ── Removed DesktopRootContent redundant implementation ──────────────────────────
-
 // ── Helper extension ──────────────────────────────────────────────────────────
 
 private fun RootComponent.Child.toDestination(): Destination? =
     when (this) {
         is RootComponent.Child.HomeChild -> Destination.Home
-        is RootComponent.Child.ChatChild -> Destination.Chat
-        is RootComponent.Child.TopicsChild -> Destination.Topics
-        is RootComponent.Child.SourcesChild -> Destination.Sources
+        is RootComponent.Child.PingoChild -> Destination.Pingo
+        is RootComponent.Child.EgloosChild -> Destination.Egloos
+        is RootComponent.Child.SavedChild -> Destination.Saved
         is RootComponent.Child.SettingsChild -> Destination.Settings
-        is RootComponent.Child.OnboardingChild,
-        is RootComponent.Child.LoginChild,
-        is RootComponent.Child.SignUpChild -> null
+        else -> null
     }

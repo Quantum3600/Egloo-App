@@ -4,12 +4,14 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.*
 import com.trishit.egloo.domain.models.*
@@ -67,7 +69,7 @@ fun TopicsScreen(viewModel: TopicsViewModel = koinInject()) {
 }
 
 @Composable
-private fun TopicCard(topic: Topic, onClick: () -> Unit) {
+internal fun TopicCard(topic: Topic, onClick: () -> Unit) {
     val accentColor = topic.color.toColor()
     Surface(
         onClick = onClick,
@@ -166,12 +168,51 @@ fun SourcesScreen(viewModel: SourcesViewModel = koinInject()) {
 
         item { Spacer(Modifier.height(8.dp)) }
 
-        items(state.sources) { source ->
-            SourceRow(
-                source = source,
-                isConnecting = state.connectingType == source.type,
-                onConnect = { viewModel.connectSource(source.type) },
-                onDisconnect = { viewModel.disconnectSource(source.id) },
+        // Show auth message if present
+        if (state.authMessage != null) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (state.authMessageType == AuthMessageType.SUCCESS) {
+                        EglooColors.TealSurface
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    },
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            null,
+                            tint = if (state.authMessageType == AuthMessageType.SUCCESS) {
+                                EglooColors.TealDark
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        )
+                        Text(
+                            state.authMessage ?: "",
+                            color = if (state.authMessageType == AuthMessageType.SUCCESS) {
+                                EglooColors.TealDark
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Render merged source rows
+        items(state.sourceRows) { row ->
+            SourceRowWithAvailable(
+                sourceRow = row,
+                isConnecting = state.connectingSourceId == row.sourceId,
+                onConnect = { viewModel.connectSource(row.sourceId) },
+                onDisconnect = { row.connectedSource?.id?.let { viewModel.disconnectSource(it) } },
             )
         }
 
@@ -180,8 +221,8 @@ fun SourcesScreen(viewModel: SourcesViewModel = koinInject()) {
 }
 
 @Composable
-private fun SourceRow(
-    source: ConnectedSource,
+private fun SourceRowWithAvailable(
+    sourceRow: SourceRowData,
     isConnecting: Boolean,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
@@ -197,37 +238,42 @@ private fun SourceRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SourceDot(
-                source.type,
-                Modifier.size(10.dp)
+                when (sourceRow.sourceId) {
+                    "gmail" -> SourceType.GMAIL
+                    "slack" -> SourceType.SLACK
+                    "google_drive" -> SourceType.GOOGLE_DRIVE
+                    "notion" -> SourceType.NOTION
+                    "pdf" -> SourceType.PDF
+                    else -> SourceType.MANUAL
+                },
+                modifier = Modifier.size(10.dp)
             )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = source.type.displayName,
+                    text = sourceRow.availableSource.displayName,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = if (source.isConnected) {
-                        "${source.itemCount} items · synced ${source.lastSyncedAt ?: "never"}"
+                    text = if (sourceRow.isConnected) {
+                        "${sourceRow.itemCount} items · synced ${sourceRow.lastSyncedAt ?: "never"}"
                     } else {
-                        source.accountName
+                        sourceRow.availableSource.description
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            if (isConnecting) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-            } else if (source.isConnected) {
-                OutlinedButton(
+            when {
+                isConnecting -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                sourceRow.isConnected -> OutlinedButton(
                     onClick = onDisconnect,
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 ) {
                     Text("Disconnect", style = MaterialTheme.typography.labelMedium)
                 }
-            } else {
-                Button(
+                else -> Button(
                     onClick = onConnect,
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 ) {
@@ -391,6 +437,93 @@ private fun SyncFrequencyRow(hours: Int, onSelect: (Int) -> Unit) {
                     label = { Text("${h}h") },
                 )
             }
+        }
+    }
+}
+
+// =============================================================================
+// SAVED ITEMS SCREEN
+// =============================================================================
+
+@Composable
+fun SavedItemsScreen(
+    viewModel: SavedViewModel = koinInject()
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+    ) {
+        Text(
+            text = "Saved Items",
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = "Your bookmarked insights",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        if (state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.items.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No saved items yet", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(state.items) { item ->
+                    SavedItemCard(item, onRemove = { viewModel.unsaveItem(item.id) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedItemCard(item: SavedItem, onRemove: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = item.type.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(text = item.title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = item.summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

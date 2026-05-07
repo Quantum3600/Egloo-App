@@ -61,6 +61,8 @@ val eglooModule = module {
     single<ChatRepository> { KtorChatRepository(get()) }
     single<TopicsRepository> { KtorTopicsRepository(get()) }
     single<SourcesRepository> { KtorSourcesRepository(get()) }
+    single<AvailableSourcesRepository> { KtorAvailableSourcesRepository(get()) }
+    single<SavedRepository> { KtorSavedRepository(get()) }
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
 
     // ── ViewModels ────────────────────────────────────────────────────────────
@@ -70,4 +72,5 @@ val eglooModule = module {
     factoryOf(::TopicsViewModel)
     factoryOf(::SourcesViewModel)
     factoryOf(::SettingsViewModel)
+    factoryOf(::SavedViewModel)
 }

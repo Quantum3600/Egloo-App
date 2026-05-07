@@ -15,10 +15,10 @@ sealed interface Destination {
     @Serializable data object Login      : Destination
     @Serializable data object SignUp     : Destination
     @Serializable data object Home       : Destination
-    @Serializable data object Chat       : Destination
-    @Serializable data object Topics     : Destination
-    @Serializable data object Sources    : Destination
+    @Serializable data object Pingo      : Destination
+    @Serializable data object Egloos     : Destination
     @Serializable data object Settings   : Destination
+    @Serializable data object Saved      : Destination
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,10 +36,10 @@ interface RootComponent {
         class LoginChild(val component: ComponentContext)      : Child()
         class SignUpChild(val component: ComponentContext)     : Child()
         class HomeChild(val component: ComponentContext)       : Child()
-        class ChatChild(val component: ComponentContext)       : Child()
-        class TopicsChild(val component: ComponentContext)     : Child()
-        class SourcesChild(val component: ComponentContext)    : Child()
+        class PingoChild(val component: ComponentContext)      : Child()
+        class EgloosChild(val component: ComponentContext)     : Child()
         class SettingsChild(val component: ComponentContext)   : Child()
+        class SavedChild(val component: ComponentContext)      : Child()
     }
 }
 
@@ -79,10 +79,10 @@ class DefaultRootComponent(
         Destination.Login      -> RootComponent.Child.LoginChild(componentContext)
         Destination.SignUp     -> RootComponent.Child.SignUpChild(componentContext)
         Destination.Home       -> RootComponent.Child.HomeChild(componentContext)
-        Destination.Chat       -> RootComponent.Child.ChatChild(componentContext)
-        Destination.Topics     -> RootComponent.Child.TopicsChild(componentContext)
-        Destination.Sources    -> RootComponent.Child.SourcesChild(componentContext)
+        Destination.Pingo      -> RootComponent.Child.PingoChild(componentContext)
+        Destination.Egloos     -> RootComponent.Child.EgloosChild(componentContext)
         Destination.Settings   -> RootComponent.Child.SettingsChild(componentContext)
+        Destination.Saved      -> RootComponent.Child.SavedChild(componentContext)
     }
 
     override fun navigateTo(destination: Destination) {

@@ -74,8 +74,9 @@ private fun HomeContent(
                     "${digest.totalItemCount} items read",
                     modifier = Modifier.weight(1f)
                 )
+                val topicCount = if (digest.topics.isNotEmpty()) digest.topics.size else digest.sections.size
                 StatChip(
-                    "${digest.sections.size} topics",
+                    "$topicCount topics",
                     modifier = Modifier.weight(1f)
                 )
                 val totalActions = digest.sections.sumOf { it.actionItems.size }
@@ -84,6 +85,27 @@ private fun HomeContent(
                     highlight = true,
                     modifier = Modifier.weight(1f),
                 )
+            }
+        }
+
+        // ── Topics in Digest ──────────────────────────────────────────────────
+        if (digest.topics.isNotEmpty()) {
+            item {
+                Text(
+                    "Topics in this digest",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(digest.topics) { topic ->
+                        Box(modifier = Modifier.width(160.dp)) {
+                            TopicCard(topic = topic, onClick = { /* Navigate to Topic? */ })
+                        }
+                    }
+                }
             }
         }
 
