@@ -8,16 +8,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.trishit.egloo.domain.viewmodels.BrainViewModel
+import com.trishit.egloo.domain.viewmodels.SourcesViewModel
 import com.trishit.egloo.domain.viewmodels.TopicsViewModel
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EgloosScreen(
-    topicsViewModel: TopicsViewModel = koinInject()
+    topicsViewModel: TopicsViewModel = koinInject(),
+    sourcesViewModel: SourcesViewModel = koinInject(),
+    brainViewModel: BrainViewModel = koinInject()
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Topics", "Sources")
+    val tabs = listOf("Topics", "Connections", "Sources")
     var showCreateTopicDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -62,7 +66,8 @@ fun EgloosScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTab) {
                 0 -> TopicsScreen(topicsViewModel)
-                1 -> SourcesScreen()
+                1 -> ConnectionsScreen(brainViewModel)
+                2 -> SourcesScreen(sourcesViewModel)
             }
         }
     }

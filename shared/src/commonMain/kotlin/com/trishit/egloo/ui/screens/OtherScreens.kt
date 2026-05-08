@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -145,29 +146,160 @@ private fun TopicColor.toColor(): Color = when (this) {
 }
 
 // =============================================================================
+// CONNECTIONS SCREEN
+// =============================================================================
+
+@Composable
+fun ConnectionsScreen(viewModel: BrainViewModel = koinInject()) {
+    val state by viewModel.uiState.collectAsState()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+            Text("Semantic Connections", style = MaterialTheme.typography.displaySmall)
+            Text(
+                "How your different data sources relate to each other",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.connections.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No cross-source connections found yet.", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(state.connections) { connection ->
+                    ConnectionCard(connection)
+                }
+                item { Spacer(Modifier.height(80.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionCard(connection: BrainConnection) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(EglooColors.TealPrimary)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        connection.topic,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    connection.relatedSources.forEach { sourceName ->
+                        val sourceType = try { SourceType.valueOf(sourceName.uppercase()) } catch (e: Exception) { SourceType.MANUAL }
+                        SourceDot(sourceType)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Text(connection.summary, style = MaterialTheme.typography.bodyMedium)
+            
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                    Text(
+                        connection.suggestedAction,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
 // SOURCES SCREEN
 // =============================================================================
 
 @Composable
-fun SourcesScreen(viewModel: SourcesViewModel = koinInject()) {
+fun SourcesScreen(
+    viewModel: SourcesViewModel = koinInject(),
+    ingestViewModel: IngestViewModel = koinInject(),
+    onNavigateToPdfUpload: () -> Unit = {}
+) {
     val state by viewModel.uiState.collectAsState()
+    val ingestState by ingestViewModel.uiState.collectAsState()
+
+    LaunchedEffect(state.navigateToPdfUpload) {
+        if (state.navigateToPdfUpload) {
+            onNavigateToPdfUpload()
+            viewModel.onPdfUploadNavigated()
+        }
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Sources", style = MaterialTheme.typography.displaySmall)
-                Text(
-                    "Connect your tools so Pingo can read them",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Sources", style = MaterialTheme.typography.displaySmall)
+                    Text(
+                        "Connect your tools so Pingo can read them",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                
+                Button(
+                    onClick = { ingestViewModel.triggerSyncAll() },
+                    enabled = ingestState.activeJobs.isEmpty(),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    if (ingestState.activeJobs.isNotEmpty()) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Sync All")
+                    }
+                }
             }
         }
 
         item { Spacer(Modifier.height(8.dp)) }
+
+        // Show active ingestion jobs
+        if (ingestState.activeJobs.isNotEmpty()) {
+            items(ingestState.activeJobs) { job ->
+                IngestStatusIndicator(job)
+                Spacer(Modifier.height(8.dp))
+            }
+        }
 
         // Show auth message if present
         if (state.authMessage != null) {
@@ -306,6 +438,24 @@ fun SettingsScreen(
         }
 
         item {
+            state.userProfile?.let { profile ->
+                SettingsSection("Account") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        PingoAvatar(size = 40.dp)
+                        Column {
+                            Text(profile.full_name ?: "Egloo User", style = MaterialTheme.typography.titleMedium)
+                            Text(profile.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             SettingsSection("Appearance") {
                 ToggleRow(
                     label = "Dark theme",
@@ -353,6 +503,25 @@ fun SettingsScreen(
                     )
                 ) {
                     Text("Restart Onboarding")
+                }
+                
+                Spacer(Modifier.height(8.dp))
+                
+                OutlinedButton(
+                    onClick = viewModel::logout,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Logout")
+                    }
                 }
             }
         }

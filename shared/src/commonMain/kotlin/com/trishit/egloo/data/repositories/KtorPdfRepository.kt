@@ -1,6 +1,7 @@
 package com.trishit.egloo.data.repositories
 
 import com.trishit.egloo.data.api.PdfListResponse
+import com.trishit.egloo.data.api.PdfUploadResponse
 import com.trishit.egloo.data.api.toDomain
 import com.trishit.egloo.domain.models.UploadedPdf
 import io.ktor.client.*
@@ -8,6 +9,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
+import io.ktor.http.HttpHeaders.ContentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -29,18 +31,7 @@ class KtorPdfRepository(private val client: HttpClient) : PdfRepository {
 
     override suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf> {
         return try {
-            val response = client.submitForm(
-                url = "/api/v1/ingest/pdf",
-                formParameters = Parameters.build {
-                    append("filename", filename)
-                }
-            ) {
-                val boundary = "WebKitFormBoundary7MA4YWxkTrZu0gW"
-                contentType(ContentType("multipart", "form-data", mapOf("boundary" to boundary)))
-            }
-
-            // Alternative: Using FormData for multipart upload
-            val multipartResponse = client.post("/api/v1/ingest/pdf") {
+            val response = client.post("/api/v1/ingest/pdf") {
                 setBody(
                     MultiPartFormDataContent(
                         formData {
@@ -52,11 +43,11 @@ class KtorPdfRepository(private val client: HttpClient) : PdfRepository {
                 )
             }
 
-            if (multipartResponse.status == HttpStatusCode.OK) {
-                val dto = multipartResponse.body<com.trishit.egloo.data.api.PdfUploadResponse>()
+            if (response.status == HttpStatusCode.OK) {
+                val dto = response.body<PdfUploadResponse>()
                 Result.success(dto.toDomain())
             } else {
-                Result.failure(Exception("Upload failed: ${multipartResponse.status}"))
+                Result.failure(Exception("Upload failed: ${response.status}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

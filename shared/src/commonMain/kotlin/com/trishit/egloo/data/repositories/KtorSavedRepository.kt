@@ -14,8 +14,8 @@ class KtorSavedRepository(private val client: HttpClient) : SavedRepository {
         try {
             val response = client.get("/api/v1/saved")
             if (response.status.isSuccess()) {
-                val listResponse = response.body<SavedListResponse>()
-                emit(listResponse.items.map { it.toDomain() })
+                val items = response.body<List<SavedItemResponse>>()
+                emit(items.map { it.toDomain() })
             } else {
                 emit(emptyList())
             }

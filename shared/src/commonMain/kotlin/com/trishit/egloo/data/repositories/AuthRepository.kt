@@ -14,8 +14,9 @@ interface AuthRepository {
     val isAuthenticated: StateFlow<Boolean>
     suspend fun login(email: String, password: String): Result<Unit>
     suspend fun register(email: String, password: String, name: String): Result<Unit>
-    fun logout()
+    suspend fun logout(): Result<Unit>
     fun getToken(): String?
+    fun getUserProfile(): Flow<UserResponse?>
 }
 
 class KtorAuthRepository(
@@ -62,12 +63,33 @@ class KtorAuthRepository(
         }
     }
 
-    override fun logout() {
-        settings.remove("access_token")
-        _isAuthenticated.value = false
+    override suspend fun logout(): Result<Unit> {
+        return try {
+            client.post("/api/v1/auth/logout")
+            settings.remove("access_token")
+            _isAuthenticated.value = false
+            Result.success(Unit)
+        } catch (e: Exception) {
+            settings.remove("access_token")
+            _isAuthenticated.value = false
+            Result.failure(e)
+        }
     }
 
     override fun getToken(): String? {
         return settings.getStringOrNull("access_token")
+    }
+
+    override fun getUserProfile(): Flow<UserResponse?> = flow {
+        try {
+            val response = client.get("/api/v1/auth/me")
+            if (response.status.isSuccess()) {
+                emit(response.body<UserResponse>())
+            } else {
+                emit(null)
+            }
+        } catch (e: Exception) {
+            emit(null)
+        }
     }
 }

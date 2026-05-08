@@ -3,6 +3,7 @@ package com.trishit.egloo.data.api
 import com.trishit.egloo.domain.models.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.*
 import kotlin.time.Clock
@@ -56,6 +57,13 @@ data class DigestResponse(
 )
 
 @Serializable
+data class GenerateDigestRequest(
+    @SerialName("force_regenerate") val force_regenerate: Boolean = false,
+    @SerialName("fcm_token") val fcm_token: String? = null,
+    @SerialName("target_date") val target_date: String? = null
+)
+
+@Serializable
 data class DigestSectionDto(
     val title: String,
     val subtitle: String,
@@ -89,10 +97,10 @@ data class TopicResponse(
     val id: String,
     val name: String,
     val summary: String? = "",
-    val source_types: List<String>? = emptyList(),
-    val item_count: Int = 0,
-    val last_refreshed_at: String? = null,
-    val created_at: String? = null
+    @SerialName("sourceTypes") val source_types: List<String>? = emptyList(),
+    @SerialName("itemCount") val item_count: Int = 0,
+    @SerialName("lastRefreshedAt") val last_refreshed_at: String? = null,
+    @SerialName("createdAt") val created_at: String? = null
 )
 
 @Serializable
@@ -107,10 +115,10 @@ data class TopicListResponse(
 data class AvailableSourceDto(
     val id: String,
     val name: String,
-    val display_name: String,
+    @SerialName("displayName") val display_name: String,
     val icon: String,
     val description: String,
-    val requires_auth: Boolean = true
+    @SerialName("requiresAuth") val requires_auth: Boolean = true
 )
 
 @Serializable
@@ -122,15 +130,103 @@ data class AvailableSourceListResponse(
 @Serializable
 data class SourceResponse(
     val id: String,
-    val source_type: String,
-    val sync_status: String,
-    val last_synced_at: String? = null,
-    val created_at: String
+    val type: String,
+    val sourceId: String,
+    val accountName: String? = null,
+    val isConnected: Boolean,
+    val oauthProviderAccount: String? = null,
+    val itemCount: Int = 0,
+    val lastSyncedAt: String? = null,
+    val nextSyncAt: String? = null,
+    val syncStatus: String
 )
 
 @Serializable
 data class SourceListResponse(
     val sources: List<SourceResponse>,
+    val total: Int
+)
+
+// ── Brain DTOs ───────────────────────────────────────────────────────────────
+
+@Serializable
+data class BrainTodayResponse(
+    val priorities: List<String> = emptyList(),
+    val blocked: List<String> = emptyList(),
+    val action_items: List<String> = emptyList(),
+    val suggested_first_step: String = "",
+    val model_used: String? = null
+)
+
+@Serializable
+data class BrainMissingResponse(
+    val missing: List<String> = emptyList(),
+    val model_used: String? = null
+)
+
+@Serializable
+data class BrainConnectionDto(
+    val topic: String,
+    val related_sources: List<String>,
+    val urgency_score: Int,
+    val suggested_action: String,
+    val summary: String
+)
+
+@Serializable
+data class BrainConnectionsResponse(
+    val connections: List<BrainConnectionDto> = emptyList(),
+    val model_used: String? = null
+)
+
+@Serializable
+data class BrainAlertDto(
+    val id: String,
+    val title: String,
+    val message: String,
+    val urgency: String,
+    val timestamp: String
+)
+
+// ── Ingest DTOs ──────────────────────────────────────────────────────────────
+
+@Serializable
+data class IngestJobResponse(
+    val job_id: String,
+    val source_id: String,
+    val source_type: String,
+    val status: String,
+    val progress: Int,
+    val message: String,
+    val created_at: String,
+    val updated_at: String,
+    val error: String? = null
+)
+
+@Serializable
+data class IngestResponse(
+    val job_id: String,
+    val source_id: String,
+    val source_type: String,
+    val message: String
+)
+
+@Serializable
+data class JobStatusResponse(
+    val job_id: String,
+    @SerialName("sourceId") val source_id: String,
+    @SerialName("sourceType") val source_type: String,
+    val status: String,
+    val progress: Int,
+    val message: String,
+    @SerialName("createdAt") val created_at: String,
+    @SerialName("updatedAt") val updated_at: String,
+    val error: String? = null
+)
+
+@Serializable
+data class JobListResponse(
+    val jobs: List<JobStatusResponse>,
     val total: Int
 )
 
@@ -143,13 +239,32 @@ data class AskRequest(
 )
 
 @Serializable
+data class ChatRequest(val query: String)
+
+@Serializable
 data class AskResponse(
     val answer: String,
     val sources: List<SourceCitationDto> = emptyList(),
-    val model_used: String? = null,
-    val chunks_retrieved: Int = 0,
+    @SerialName("modelUsed") val model_used: String? = null,
+    @SerialName("chunksRetrieved") val chunks_retrieved: Int = 0,
     val cached: Boolean = false,
     val question: String? = null
+)
+
+@Serializable
+data class QueryHistoryItem(
+    val id: String,
+    val question: String,
+    val answer: String?,
+    @SerialName("sourcesUsed") val sources_used: List<SourceCitationDto>? = emptyList(),
+    @SerialName("modelUsed") val model_used: String? = null,
+    @SerialName("createdAt") val created_at: String
+)
+
+@Serializable
+data class QueryHistoryResponse(
+    val history: List<QueryHistoryItem>,
+    val total: Int
 )
 
 @Serializable
@@ -184,8 +299,8 @@ data class SavedItemResponse(
     val id: String,
     val title: String,
     val summary: String,
-    val item_type: String,
-    val saved_at: String,
+    @SerialName("itemType") val item_type: String,
+    @SerialName("savedAt") val saved_at: String,
     val metadata: Map<String, String> = emptyMap()
 )
 
@@ -209,9 +324,9 @@ fun DigestResponse.toDomain(): DailyDigest {
     
     val derivedGreeting = greeting ?: let {
         when (now.hour) {
-            in 0..11 -> "Good morning, User"
-            in 12..17 -> "Good afternoon, User"
-            else -> "Good evening, User"
+            in 0..11 -> "Good morning"
+            in 12..17 -> "Good afternoon"
+            else -> "Good evening"
         }
     }
     
@@ -280,11 +395,52 @@ fun TopicResponse.toDomain() = Topic(
 
 fun SourceResponse.toDomain() = ConnectedSource(
     id = id,
-    type = try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL },
-    accountName = source_type.replaceFirstChar { it.uppercase() },
-    isConnected = sync_status == "success" || sync_status == "syncing",
-    lastSyncedAt = last_synced_at,
-    itemCount = 0
+    type = try { SourceType.valueOf(type.uppercase()) } catch (e: Exception) { SourceType.MANUAL },
+    accountName = accountName ?: oauthProviderAccount ?: type.replaceFirstChar { it.uppercase() },
+    isConnected = isConnected,
+    lastSyncedAt = lastSyncedAt,
+    itemCount = itemCount
+)
+
+fun BrainTodayResponse.toDomain() = BrainToday(
+    priorities = priorities,
+    blocked = blocked,
+    actionItems = action_items,
+    suggestedFirstStep = suggested_first_step,
+    modelUsed = model_used
+)
+
+fun BrainMissingResponse.toDomain() = BrainMissing(
+    missing = missing,
+    modelUsed = model_used
+)
+
+fun BrainConnectionDto.toDomain() = BrainConnection(
+    topic = topic,
+    relatedSources = related_sources,
+    urgencyScore = urgency_score,
+    suggestedAction = suggested_action,
+    summary = summary
+)
+
+fun BrainAlertDto.toDomain() = BrainAlert(
+    id = id,
+    title = title,
+    message = message,
+    urgency = urgency,
+    timestamp = timestamp
+)
+
+fun JobStatusResponse.toDomain() = IngestJob(
+    id = job_id,
+    sourceId = source_id,
+    sourceType = source_type,
+    status = status,
+    progress = progress,
+    message = message,
+    createdAt = created_at,
+    updatedAt = updated_at,
+    error = error
 )
 
 fun AskResponse.toDomain(id: String, sentAt: Long) = ChatMessage.Pingo(

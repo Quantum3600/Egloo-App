@@ -43,7 +43,7 @@ object DummyData {
     val dummyDigest = DailyDigest(
         id = "d_today",
         dateLabel = "Friday, May 2",
-        greeting = "Good morning, User",
+        greeting = "Good morning",
         pingoMessage = "I've analyzed 12 new messages since yesterday. The database migration is the hot topic in Slack today.",
         totalItemCount = 1546,
         sections = listOf(
@@ -124,7 +124,7 @@ object DummyData {
     )
 
     val dummySettings = AppSettings(
-        userName = "User",
+        userName = "Trishit Saha",
         darkTheme = true,
         pingoGreetingsEnabled = true,
         digestNotificationsEnabled = true,
@@ -171,6 +171,95 @@ object DummyData {
             icon = "https://www.adobe.com/content/dam/cc/icons/pdf.svg",
             description = "Upload PDF documents manually",
             requiresAuth = false
+        )
+    )
+
+    // ── Brain Dummy Data ──────────────────────────────────────────────────────────
+
+    val dummyBrainToday = BrainToday(
+        priorities = listOf(
+            "Review Project Alpha budget proposal from Sarah",
+            "Respond to client feedback on the new design system",
+            "Prepare for tomorrow's team sync"
+        ),
+        blocked = listOf(
+            "Missing approval for server migration from DevOps",
+            "Waiting for API documentation from the backend team"
+        ),
+        actionItems = listOf(
+            "Approve expense report",
+            "Draft quarterly report",
+            "Schedule 1:1 with John"
+        ),
+        suggestedFirstStep = "Start by reviewing Sarah's budget proposal in Slack; it's the highest priority blocker.",
+        modelUsed = "gemini-1.5-pro"
+    )
+
+    val dummyBrainMissing = BrainMissing(
+        missing = listOf(
+            "Unanswered email from Mark regarding the contract",
+            "Pending approval for the new mascot design",
+            "Slack message from HR about benefits enrollment"
+        ),
+        modelUsed = "gemini-1.5-pro"
+    )
+
+    val dummyBrainConnections = listOf(
+        BrainConnection(
+            topic = "Project Alpha",
+            relatedSources = listOf("Gmail", "Slack"),
+            urgencyScore = 9,
+            suggestedAction = "Combine the budget constraints from Gmail with the timeline discussed in Slack.",
+            summary = "Sarah sent the budget via email, but the team is discussing a tighter deadline in the Slack #project-alpha channel."
+        ),
+        BrainConnection(
+            topic = "Infrastructure Upgrade",
+            relatedSources = listOf("Slack", "PDF"),
+            urgencyScore = 6,
+            suggestedAction = "Check if the technical requirements in the PDF align with the recent Slack thread.",
+            summary = "The AWS migration guide (PDF) specifies VPC settings that were questioned by Mike in the #devops channel."
+        )
+    )
+
+    val dummyBrainAlerts = listOf(
+        BrainAlert(
+            id = "1",
+            title = "Urgent: Deadline Tomorrow",
+            message = "Project Alpha proposal is due by EOD tomorrow.",
+            urgency = "critical",
+            timestamp = "2024-05-08T10:00:00Z"
+        ),
+        BrainAlert(
+            id = "2",
+            title = "Approval Needed",
+            message = "Sarah is waiting for your approval on the marketing budget.",
+            urgency = "high",
+            timestamp = "2024-05-08T11:30:00Z"
+        )
+    )
+
+    // ── Ingest Job Dummy Data ─────────────────────────────────────────────────────
+
+    val dummyIngestJobs = listOf(
+        IngestJob(
+            id = "job_1",
+            sourceId = "gmail_1",
+            sourceType = "GMAIL",
+            status = "success",
+            progress = 100,
+            message = "Successfully ingested 45 emails.",
+            createdAt = "2024-05-08T08:00:00Z",
+            updatedAt = "2024-05-08T08:05:00Z"
+        ),
+        IngestJob(
+            id = "job_2",
+            sourceId = "slack_1",
+            sourceType = "SLACK",
+            status = "started",
+            progress = 45,
+            message = "Fetching messages from #general...",
+            createdAt = "2024-05-08T12:00:00Z",
+            updatedAt = "2024-05-08T12:02:00Z"
         )
     )
 }

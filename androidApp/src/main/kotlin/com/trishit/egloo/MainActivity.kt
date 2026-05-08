@@ -14,6 +14,8 @@ import com.trishit.egloo.navigation.RootContent
 
 import com.trishit.egloo.data.repositories.AuthRepository
 import com.trishit.egloo.platform.DeepLinkHandler
+import com.trishit.egloo.platform.androidAppContext
+import com.trishit.egloo.platform.AndroidFilePicker
 import org.koin.android.ext.android.get
 import kotlinx.coroutines.launch
 
@@ -22,6 +24,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        // Provide application context for platform helpers
+        androidAppContext = applicationContext
+
+        // Initialize Android file picker bridge
+        AndroidFilePicker.init(this)
         handleIntent(intent)
 
         val authRepo: AuthRepository = get()

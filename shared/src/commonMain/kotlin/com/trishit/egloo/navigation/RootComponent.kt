@@ -19,6 +19,7 @@ sealed interface Destination {
     @Serializable data object Egloos     : Destination
     @Serializable data object Settings   : Destination
     @Serializable data object Saved      : Destination
+    @Serializable data object PdfUpload  : Destination
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ interface RootComponent {
         class EgloosChild(val component: ComponentContext)     : Child()
         class SettingsChild(val component: ComponentContext)   : Child()
         class SavedChild(val component: ComponentContext)      : Child()
+        class PdfUploadChild(val component: ComponentContext)  : Child()
     }
 }
 
@@ -83,6 +85,7 @@ class DefaultRootComponent(
         Destination.Egloos     -> RootComponent.Child.EgloosChild(componentContext)
         Destination.Settings   -> RootComponent.Child.SettingsChild(componentContext)
         Destination.Saved      -> RootComponent.Child.SavedChild(componentContext)
+        Destination.PdfUpload  -> RootComponent.Child.PdfUploadChild(componentContext)
     }
 
     override fun navigateTo(destination: Destination) {

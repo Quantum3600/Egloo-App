@@ -3,11 +3,9 @@ package com.trishit.egloo.data.repositories
 import com.trishit.egloo.data.dummy.DummyData
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.platform.currentTimeMillis
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import kotlinx.datetime.Clock
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dummy implementations
@@ -174,5 +172,101 @@ class DummySavedRepository : SavedRepository {
 class DummyAvailableSourcesRepository : AvailableSourcesRepository {
     override fun getAvailableSources(): Flow<List<AvailableSource>> = flow {
         emit(DummyData.availableSources)
+    }
+}
+
+class DummyPdfRepository : PdfRepository {
+    private val _pdfs = MutableStateFlow<List<UploadedPdf>>(emptyList())
+    override fun getUploadedPdfs(): Flow<List<UploadedPdf>> = _pdfs.asStateFlow()
+    override suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf> {
+        delay(1000)
+        val pdf = UploadedPdf(
+            id = "pdf_${currentTimeMillis()}",
+            filename = filename,
+            pages = (1..50).random(),
+            status = "indexed",
+            uploadedAt = "Just now",
+            fileSize = fileBytes.size.toLong()
+        )
+        _pdfs.value = _pdfs.value + pdf
+        return Result.success(pdf)
+    }
+    override suspend fun deletePdf(pdfId: String): Result<Unit> {
+        _pdfs.value = _pdfs.value.filter { it.id != pdfId }
+        return Result.success(Unit)
+    }
+    override suspend fun reindexPdf(pdfId: String): Result<Unit> = Result.success(Unit)
+}
+
+class DummyBrainRepository : BrainRepository {
+    override fun getBrainToday(): Flow<BrainToday> = flow {
+        delay(800)
+        emit(DummyData.dummyBrainToday)
+    }
+
+    override fun getBrainMissing(): Flow<BrainMissing> = flow {
+        delay(1000)
+        emit(DummyData.dummyBrainMissing)
+    }
+
+    override fun getBrainConnections(): Flow<List<BrainConnection>> = flow {
+        delay(1200)
+        emit(DummyData.dummyBrainConnections)
+    }
+
+    override fun getBrainAlerts(): Flow<List<BrainAlert>> = flow {
+        delay(500)
+        emit(DummyData.dummyBrainAlerts)
+    }
+
+    override suspend fun clearAlerts(): Result<Unit> = Result.success(Unit)
+}
+
+class DummyIngestRepository : IngestRepository {
+    private val _jobs = MutableStateFlow(DummyData.dummyIngestJobs)
+
+    override fun getRecentJobs(): Flow<List<IngestJob>> = _jobs
+
+    override fun getJobStatus(jobId: String): Flow<IngestJob> = _jobs.map { jobs ->
+        jobs.find { it.id == jobId } ?: jobs.first()
+    }
+
+    override suspend fun triggerIngest(sourceId: String): Result<String> {
+        val jobId = "job_${currentTimeMillis()}"
+        val newJob = IngestJob(
+            id = jobId,
+            sourceId = sourceId,
+            sourceType = "MANUAL",
+            status = "started",
+            progress = 0,
+            message = "Ingestion started...",
+            createdAt = "Now",
+            updatedAt = "Now"
+        )
+        _jobs.update { it + newJob }
+        
+        // Simulate progress
+        CoroutineScope(Dispatchers.Default).launch {
+            for (p in 10..100 step 20) {
+                delay(1000)
+                _jobs.update { jobs ->
+                    jobs.map { 
+                        if (it.id == jobId) it.copy(
+                            progress = p, 
+                            status = if (p == 100) "success" else "started",
+                            updatedAt = "Now"
+                        ) else it
+                    }
+                }
+            }
+        }
+        
+        return Result.success(jobId)
+    }
+
+    override suspend fun triggerAllIngest(): Result<List<String>> {
+        val jobIds = listOf("job_all_1", "job_all_2")
+        jobIds.forEach { triggerIngest(it) }
+        return Result.success(jobIds)
     }
 }

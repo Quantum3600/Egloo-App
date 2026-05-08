@@ -64,6 +64,9 @@ val eglooModule = module {
     single<AvailableSourcesRepository> { KtorAvailableSourcesRepository(get()) }
     single<SavedRepository> { KtorSavedRepository(get()) }
     single<PdfRepository> { KtorPdfRepository(get()) }
+    single<BrainRepository> { KtorBrainRepository(get()) }
+    single<IngestRepository> { KtorIngestRepository(get()) }
+    single<NotificationRepository> { InMemoryNotificationRepository() }
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
 
     // ── ViewModels ────────────────────────────────────────────────────────────
@@ -74,4 +77,8 @@ val eglooModule = module {
     factoryOf(::SourcesViewModel)
     factoryOf(::SettingsViewModel)
     factoryOf(::SavedViewModel)
+    factoryOf(::PdfViewModel)
+    factoryOf(::BrainViewModel)
+    factoryOf(::IngestViewModel)
+    factoryOf(::NotificationViewModel)
 }

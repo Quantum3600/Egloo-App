@@ -147,8 +147,11 @@ fun AdaptiveRootContent(component: RootComponent) {
                                             when (val instance = child.instance) {
                                                 is RootComponent.Child.HomeChild -> HomeScreen()
                                                 is RootComponent.Child.PingoChild -> PingoScreen()
-                                                is RootComponent.Child.EgloosChild -> EgloosScreen()
+                                                is RootComponent.Child.EgloosChild -> SourcesScreen(
+                                                    onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
+                                                )
                                                 is RootComponent.Child.SavedChild -> SavedItemsScreen()
+                                                is RootComponent.Child.PdfUploadChild -> PdfScreen(onBack = { component.onBackPressed() })
                                                 is RootComponent.Child.SettingsChild -> SettingsScreen(
                                                     onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                                 )
@@ -175,11 +178,14 @@ fun AdaptiveRootContent(component: RootComponent) {
                                     stack = stack,
                                     animation = stackAnimation(fade() + scale()),
                                 ) { child ->
-                                    when (val instance = child.instance) {
+                                        when (val instance = child.instance) {
                                         is RootComponent.Child.HomeChild -> HomeScreen()
                                         is RootComponent.Child.PingoChild -> PingoScreen()
-                                        is RootComponent.Child.EgloosChild -> EgloosScreen()
+                                        is RootComponent.Child.EgloosChild -> SourcesScreen(
+                                            onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
+                                        )
                                         is RootComponent.Child.SavedChild -> SavedItemsScreen()
+                                        is RootComponent.Child.PdfUploadChild -> PdfScreen(onBack = { component.onBackPressed() })
                                         is RootComponent.Child.SettingsChild -> SettingsScreen(
                                             onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
                                         )

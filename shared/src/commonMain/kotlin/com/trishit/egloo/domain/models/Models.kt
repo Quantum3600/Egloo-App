@@ -153,10 +153,64 @@ fun PdfUploadResponse.toDomain() = UploadedPdf(
 @Serializable
 data class AppSettings(
     val userName: String = "User",
-    val darkTheme: Boolean = false,
+    val darkTheme: Boolean = true, // Default to dark as per AGENTS.md
     val pingoGreetingsEnabled: Boolean = true,
     val digestNotificationsEnabled: Boolean = true,
     val syncFrequencyHours: Int = 4
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Brain / Proactive Intelligence Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+data class BrainToday(
+    val priorities: List<String> = emptyList(),
+    val blocked: List<String> = emptyList(),
+    val actionItems: List<String> = emptyList(),
+    val suggestedFirstStep: String = "",
+    val modelUsed: String? = null
+)
+
+@Serializable
+data class BrainMissing(
+    val missing: List<String> = emptyList(),
+    val modelUsed: String? = null
+)
+
+@Serializable
+data class BrainConnection(
+    val topic: String,
+    val relatedSources: List<String>,
+    val urgencyScore: Int,
+    val suggestedAction: String,
+    val summary: String
+)
+
+@Serializable
+data class BrainAlert(
+    val id: String,
+    val title: String,
+    val message: String,
+    val urgency: String, // "critical", "high", "medium", "low"
+    val timestamp: String
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ingest Job Models
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+data class IngestJob(
+    val id: String,
+    val sourceId: String,
+    val sourceType: String,
+    val status: String, // "queued", "started", "success", "failed"
+    val progress: Int,
+    val message: String,
+    val createdAt: String,
+    val updatedAt: String,
+    val error: String? = null
 )
 
 // ─────────────────────────────────────────────

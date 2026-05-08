@@ -15,15 +15,23 @@ import kotlinx.coroutines.flow.Flow
 interface DigestRepository {
     /** Emits the digest for today. Will emit a loading state then data. */
     fun getDailyDigest(): Flow<DigestResult>
+    /** Manually triggers a new digest generation. */
+    suspend fun generateDigest(force: Boolean = false): Result<Unit>
+    /** Saves a digest as a bookmark. */
+    suspend fun saveDigest(id: String): Result<Unit>
 }
 
 interface ChatRepository {
     /** Returns existing chat history as a flow. */
     fun getChatHistory(): Flow<List<ChatMessage>>
+    /** Loads history from backend. */
+    suspend fun loadHistory()
     /** Sends a user message. Pingo's reply will be emitted into getChatHistory(). */
     suspend fun sendMessage(text: String)
     /** Clears the conversation. */
     suspend fun clearHistory()
+    /** Saves a chat result as a bookmark. */
+    suspend fun saveMessage(id: String): Result<Unit>
 }
 
 interface TopicsRepository {
@@ -60,6 +68,21 @@ interface PdfRepository {
     suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf>
     suspend fun deletePdf(pdfId: String): Result<Unit>
     suspend fun reindexPdf(pdfId: String): Result<Unit>
+}
+
+interface BrainRepository {
+    fun getBrainToday(): Flow<BrainToday>
+    fun getBrainMissing(): Flow<BrainMissing>
+    fun getBrainConnections(): Flow<List<BrainConnection>>
+    fun getBrainAlerts(): Flow<List<BrainAlert>>
+    suspend fun clearAlerts(): Result<Unit>
+}
+
+interface IngestRepository {
+    fun getRecentJobs(): Flow<List<IngestJob>>
+    fun getJobStatus(jobId: String): Flow<IngestJob>
+    suspend fun triggerIngest(sourceId: String): Result<String> // Returns jobId
+    suspend fun triggerAllIngest(): Result<List<String>> // Returns jobIds
 }
 
 // ── Result wrappers ───────────────────────────────────────────────────────────

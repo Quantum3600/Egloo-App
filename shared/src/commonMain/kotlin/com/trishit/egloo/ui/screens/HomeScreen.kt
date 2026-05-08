@@ -5,6 +5,9 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -18,25 +21,43 @@ import org.koin.compose.koinInject
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = koinInject(),
+    homeViewModel: HomeViewModel = koinInject(),
+    brainViewModel: BrainViewModel = koinInject(),
+    ingestViewModel: IngestViewModel = koinInject(),
+    settingsViewModel: SettingsViewModel = koinInject(),
     onItemClick: (KnowledgeItem) -> Unit = {},
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val homeState by homeViewModel.uiState.collectAsState()
+    val brainState by brainViewModel.uiState.collectAsState()
+    val ingestState by ingestViewModel.uiState.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
+    
+    val userName = settingsState.settings.userName
 
     when {
-        state.isLoading -> LoadingState()
-        state.error != null -> ErrorState(state.error!!) { viewModel.loadDigest() }
-        state.digest != null -> HomeContent(
-            digest = state.digest!!,
+        homeState.isLoading && homeState.digest == null -> LoadingState()
+        homeState.error != null && homeState.digest == null -> ErrorState(homeState.error!!) { homeViewModel.loadDigest() }
+        else -> HomeContent(
+            userName = userName,
+            digest = homeState.digest,
+            brainState = brainState,
+            ingestState = ingestState,
             onItemClick = onItemClick,
+            onRegenerate = { homeViewModel.loadDigest(force = true) },
+            onSaveDigest = { homeViewModel.saveDigest(it) }
         )
     }
 }
 
 @Composable
 private fun HomeContent(
-    digest: DailyDigest,
+    userName: String,
+    digest: DailyDigest?,
+    brainState: BrainUiState,
+    ingestState: IngestUiState,
     onItemClick: (KnowledgeItem) -> Unit,
+    onRegenerate: () -> Unit,
+    onSaveDigest: (String) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp),
@@ -45,94 +66,156 @@ private fun HomeContent(
 
         // ── Greeting ──────────────────────────────────────────────────────────
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = digest.dateLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "${digest.greeting} ✦",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onBackground,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = digest?.dateLabel ?: "Today",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    val firstName = if (userName == "User") "" else userName.split(" ").firstOrNull() ?: ""
+                    val greetingBase = digest?.greeting?.replace(", User", "") ?: "Good morning"
+                    
+                    Text(
+                        text = if (firstName.isNotEmpty()) "$greetingBase, $firstName ✦" else "$greetingBase ✦",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+                
+                IconButton(onClick = onRegenerate) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Regenerate",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // ── Ingest Status (if any) ──────────────────────────────────────────
+        if (ingestState.activeJobs.isNotEmpty()) {
+            items(ingestState.activeJobs) { job ->
+                IngestStatusIndicator(job)
+            }
+        }
+
+        // ── Brain Priorities ──────────────────────────────────────────────────
+        brainState.today?.let { today ->
+            item {
+                PriorityCard(
+                    priorities = today.priorities,
+                    suggestedStep = today.suggestedFirstStep
                 )
             }
         }
 
-        // ── Pingo message bubble ───────────────────────────────────────────────
-        item {
-            PingoMessageBubble(digest.pingoMessage)
-        }
-
-        // ── Stats row ─────────────────────────────────────────────────────────
-        item {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                StatChip(
-                    "${digest.totalItemCount} items read",
-                    modifier = Modifier.weight(1f)
-                )
-                val topicCount = if (digest.topics.isNotEmpty()) digest.topics.size else digest.sections.size
-                StatChip(
-                    "$topicCount topics",
-                    modifier = Modifier.weight(1f)
-                )
-                val totalActions = digest.sections.sumOf { it.actionItems.size }
-                StatChip(
-                    "$totalActions actions",
-                    highlight = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        // ── Topics in Digest ──────────────────────────────────────────────────
-        if (digest.topics.isNotEmpty()) {
+        // ── Urgent Alerts ─────────────────────────────────────────────────────
+        if (brainState.alerts.isNotEmpty()) {
             item {
                 Text(
-                    "Topics in this digest",
+                    "Action Required",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+                Spacer(Modifier.height(8.dp))
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(digest.topics) { topic ->
-                        Box(modifier = Modifier.width(160.dp)) {
-                            TopicCard(topic = topic, onClick = { /* Navigate to Topic? */ })
-                        }
+                    items(brainState.alerts) { alert ->
+                        AlertItem(alert)
                     }
                 }
             }
         }
 
-        // ── Digest sections ───────────────────────────────────────────────────
-        digest.sections.forEach { section ->
-            item {
-                SectionHeader(
-                    title = section.title,
-                    subtitle = section.subtitle,
-                )
-            }
-
-            // Action items special display
-            if (section.actionItems.isNotEmpty()) {
+        // ── Missing Items ─────────────────────────────────────────────────────
+        brainState.missing?.let { missingData ->
+            if (missingData.missing.isNotEmpty()) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        section.actionItems.forEach { action ->
-                            ActionItemRow(action)
-                        }
+                    SectionHeader(
+                        title = "Pending Items",
+                        subtitle = "Things that might need your attention"
+                    )
+                }
+                items(missingData.missing) { itemText ->
+                    ActionItemRow(ActionItem(id = "", text = itemText, sourceType = SourceType.MANUAL))
+                }
+            }
+        }
+
+        // ── Pingo message bubble ───────────────────────────────────────────────
+        digest?.pingoMessage?.let {
+            item {
+                PingoMessageBubble(it)
+            }
+        }
+
+        // ── Daily Recap Divider ───────────────────────────────────────────────
+        if (digest != null) {
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Daily Recap",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { digest.id.let { onSaveDigest(it) } }) {
+                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Save Digest")
                     }
                 }
             }
 
-            items(section.items) { item ->
-                KnowledgeCard(
-                    item = item,
-                    onClick = { onItemClick(item) })
+            // ── Stats row ─────────────────────────────────────────────────────────
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    StatChip(
+                        "${digest.totalItemCount} items read",
+                        modifier = Modifier.weight(1f)
+                    )
+                    val topicCount = if (digest.topics.isNotEmpty()) digest.topics.size else digest.sections.size
+                    StatChip(
+                        "$topicCount topics",
+                        modifier = Modifier.weight(1f)
+                    )
+                    val totalActions = digest.sections.sumOf { it.actionItems.size }
+                    StatChip(
+                        "$totalActions actions",
+                        highlight = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            // ── Digest sections ───────────────────────────────────────────────────
+            digest.sections.forEach { section ->
+                item {
+                    SectionHeader(
+                        title = section.title,
+                        subtitle = section.subtitle,
+                    )
+                }
+
+                // Action items special display
+                if (section.actionItems.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            section.actionItems.forEach { action ->
+                                ActionItemRow(action)
+                            }
+                        }
+                    }
+                }
+
+                items(section.items) { item ->
+                    KnowledgeCard(
+                        item = item,
+                        onClick = { onItemClick(item) })
+                }
             }
         }
 

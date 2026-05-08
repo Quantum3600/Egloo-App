@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -83,7 +84,10 @@ fun PingoScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.messages, key = { it.id }) { message ->
-                MessageBubble(message)
+                MessageBubble(
+                    message = message,
+                    onSave = { viewModel.saveMessage(message.id) }
+                )
             }
             
             if (state.isTyping) {
@@ -94,7 +98,10 @@ fun PingoScreen(
 }
 
 @Composable
-fun MessageBubble(message: ChatMessage) {
+fun MessageBubble(
+    message: ChatMessage,
+    onSave: () -> Unit = {}
+) {
     val isUser = message is ChatMessage.User
     val alignment = if (isUser) Alignment.End else Alignment.Start
     val color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
@@ -115,11 +122,25 @@ fun MessageBubble(message: ChatMessage) {
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = message.text,
-                    color = textColor,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        text = message.text,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (!isUser) {
+                        IconButton(onClick = onSave, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Default.FavoriteBorder, 
+                                contentDescription = "Save",
+                                tint = textColor.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
                 
                 if (message is ChatMessage.Pingo) {
                     if (message.sources.isNotEmpty()) {

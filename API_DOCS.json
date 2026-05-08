@@ -186,13 +186,39 @@
         ]
       }
     },
+    "/api/v1/sources/available": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "List all supported data sources (Global)",
+        "description": "Return the list of all data sources supported by Egloo.",
+        "operationId": "get_available_sources_api_v1_sources_available_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AvailableSource"
+                  },
+                  "type": "array",
+                  "title": "Response Get Available Sources Api V1 Sources Available Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sources": {
       "get": {
         "tags": [
           "sources"
         ],
-        "summary": "List all connected data sources",
-        "description": "Return every data source connected to the authenticated user's account.",
+        "summary": "List user source connections (Both connected and available)",
+        "description": "Return the user's connection status for every available source.",
         "operationId": "list_sources_api_v1_sources_get",
         "responses": {
           "200": {
@@ -200,7 +226,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SourceListResponse"
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectedSource"
+                  },
+                  "type": "array",
+                  "title": "Response List Sources Api V1 Sources Get"
                 }
               }
             }
@@ -540,6 +570,61 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/ingest/pdf": {
+      "post": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Upload Pdf",
+        "description": "Upload a PDF file for semantic indexing.\nValidates size, type, and either processes it synchronously (free tier)\nor queues a background task (celery enabled).",
+        "operationId": "upload_pdf_api_v1_ingest_pdf_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_pdf_api_v1_ingest_pdf_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PDFUploadAcceptedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PDFUploadSuccessResponse"
+                    }
+                  ],
+                  "title": "Response Upload Pdf Api V1 Ingest Pdf Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/ingest/trigger-all": {
@@ -1841,6 +1926,164 @@
         ]
       }
     },
+    "/api/v1/brain/today": {
+      "get": {
+        "tags": [
+          "Brain"
+        ],
+        "summary": "Get Today Summary",
+        "description": "Get a proactive summary of your priorities, blockers, and action items\nbased on the last 7 days of activity across all sources.",
+        "operationId": "get_today_summary_api_v1_brain_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrainTodayResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/brain/missing": {
+      "get": {
+        "tags": [
+          "Brain"
+        ],
+        "summary": "Get Missing Items",
+        "description": "Analyzes your recent data to find unresolved tasks, unanswered messages,\nmissed deadlines, or pending approvals.",
+        "operationId": "get_missing_items_api_v1_brain_missing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrainMissingResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/brain/alerts": {
+      "get": {
+        "tags": [
+          "Brain"
+        ],
+        "summary": "Get Alerts",
+        "description": "Get the list of urgent alerts found during ingestion (e.g. deadlines, blockers).",
+        "operationId": "get_alerts_api_v1_brain_alerts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {},
+                  "type": "array",
+                  "title": "Response Get Alerts Api V1 Brain Alerts Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Brain"
+        ],
+        "summary": "Clear Alerts",
+        "description": "Clear all proactive alerts.",
+        "operationId": "clear_alerts_api_v1_brain_alerts_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Clear Alerts Api V1 Brain Alerts Delete"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/brain/connections": {
+      "get": {
+        "tags": [
+          "Brain"
+        ],
+        "summary": "Get Brain Connections",
+        "description": "Get semantically discovered connections between different data sources.\nConnects related information from PDFs, Emails, Slack, etc.",
+        "operationId": "get_brain_connections_api_v1_brain_connections_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrainConnectionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/brain/health": {
+      "get": {
+        "tags": [
+          "Brain",
+          "🐧 Health"
+        ],
+        "summary": "Brain Health",
+        "description": "Public health check for the Pingo Brain.\nChecks connections to Postgres, Redis, ChromaDB, and LLM providers.",
+        "operationId": "brain_health_api_v1_brain_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -1941,6 +2184,285 @@
           "question"
         ],
         "title": "AskResponse"
+      },
+      "AvailableSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "requiresAuth": {
+            "type": "boolean",
+            "title": "Requiresauth"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "displayName",
+          "icon",
+          "description",
+          "requiresAuth",
+          "scopes"
+        ],
+        "title": "AvailableSource"
+      },
+      "Body_upload_pdf_api_v1_ingest_pdf_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_pdf_api_v1_ingest_pdf_post"
+      },
+      "BrainConnection": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "related_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Sources"
+          },
+          "urgency_score": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Urgency Score"
+          },
+          "suggested_action": {
+            "type": "string",
+            "title": "Suggested Action"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "related_sources",
+          "urgency_score",
+          "suggested_action",
+          "summary"
+        ],
+        "title": "BrainConnection",
+        "description": "A semantically clustered connection across sources."
+      },
+      "BrainConnectionsResponse": {
+        "properties": {
+          "connections": {
+            "items": {
+              "$ref": "#/components/schemas/BrainConnection"
+            },
+            "type": "array",
+            "title": "Connections"
+          },
+          "model_used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Used"
+          }
+        },
+        "type": "object",
+        "title": "BrainConnectionsResponse",
+        "description": "List of all discovered connections."
+      },
+      "BrainMissingResponse": {
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "model_used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Used"
+          }
+        },
+        "type": "object",
+        "title": "BrainMissingResponse",
+        "description": "Analysis of gaps, missed items, and pending work."
+      },
+      "BrainTodayResponse": {
+        "properties": {
+          "priorities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Priorities"
+          },
+          "blocked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocked"
+          },
+          "action_items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Items"
+          },
+          "suggested_first_step": {
+            "type": "string",
+            "title": "Suggested First Step"
+          },
+          "model_used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggested_first_step"
+        ],
+        "title": "BrainTodayResponse",
+        "description": "Proactive daily summary of user activity."
+      },
+      "ConnectedSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "sourceId": {
+            "type": "string",
+            "title": "Sourceid"
+          },
+          "accountName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accountname"
+          },
+          "isConnected": {
+            "type": "boolean",
+            "title": "Isconnected"
+          },
+          "oauthProviderAccount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauthprovideraccount"
+          },
+          "itemCount": {
+            "type": "integer",
+            "title": "Itemcount"
+          },
+          "lastSyncedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastsyncedat"
+          },
+          "nextSyncAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextsyncat"
+          },
+          "syncStatus": {
+            "type": "string",
+            "title": "Syncstatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "sourceId",
+          "isConnected",
+          "itemCount",
+          "syncStatus"
+        ],
+        "title": "ConnectedSource"
       },
       "DigestListResponse": {
         "properties": {
@@ -2252,6 +2774,54 @@
           "message"
         ],
         "title": "MessageResponse"
+      },
+      "PDFUploadAcceptedResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Id"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "document_id",
+          "job_id"
+        ],
+        "title": "PDFUploadAcceptedResponse"
+      },
+      "PDFUploadSuccessResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Id"
+          },
+          "chunks_created": {
+            "type": "integer",
+            "title": "Chunks Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "document_id",
+          "chunks_created"
+        ],
+        "title": "PDFUploadSuccessResponse"
       },
       "QueryHistoryItem": {
         "properties": {
@@ -2585,69 +3155,6 @@
           "content_preview"
         ],
         "title": "SourceCitation"
-      },
-      "SourceListResponse": {
-        "properties": {
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/SourceResponse"
-            },
-            "type": "array",
-            "title": "Sources"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          }
-        },
-        "type": "object",
-        "required": [
-          "sources",
-          "total"
-        ],
-        "title": "SourceListResponse"
-      },
-      "SourceResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "source_type": {
-            "type": "string",
-            "title": "Source Type"
-          },
-          "sync_status": {
-            "type": "string",
-            "title": "Sync Status"
-          },
-          "last_synced_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Synced At"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "source_type",
-          "sync_status",
-          "created_at"
-        ],
-        "title": "SourceResponse"
       },
       "SyncStatusResponse": {
         "properties": {

@@ -1,5 +1,6 @@
 package com.trishit.egloo.domain.viewmodels
 
+import com.trishit.egloo.data.api.*
 import com.trishit.egloo.data.repositories.*
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.platform.DeepLinkHandler
@@ -28,8 +29,12 @@ class HomeViewModel(private val digestRepo: DigestRepository) : BaseViewModel() 
 
     init { loadDigest() }
 
-    fun loadDigest() {
+    fun loadDigest(force: Boolean = false) {
         scope.launch {
+            if (force) {
+                _uiState.update { it.copy(isLoading = true) }
+                digestRepo.generateDigest(force = true)
+            }
             digestRepo.getDailyDigest().collect { result ->
                 _uiState.value = when (result) {
                     is DigestResult.Loading -> HomeUiState(isLoading = true)
@@ -37,6 +42,12 @@ class HomeViewModel(private val digestRepo: DigestRepository) : BaseViewModel() 
                     is DigestResult.Error   -> HomeUiState(isLoading = false, error = result.message)
                 }
             }
+        }
+    }
+
+    fun saveDigest(id: String) {
+        scope.launch {
+            digestRepo.saveDigest(id)
         }
     }
 }
@@ -56,6 +67,9 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     init {
+        scope.launch {
+            chatRepo.loadHistory()
+        }
         scope.launch {
             chatRepo.getChatHistory().collect { messages ->
                 _uiState.update { it.copy(messages = messages) }
@@ -79,6 +93,12 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
 
     fun clearChat() {
         scope.launch { chatRepo.clearHistory() }
+    }
+
+    fun saveMessage(id: String) {
+        scope.launch {
+            chatRepo.saveMessage(id)
+        }
     }
 }
 
@@ -146,6 +166,7 @@ data class SourcesUiState(
     val connectedSources: List<ConnectedSource> = emptyList(),
     val sourceRows: List<SourceRowData> = emptyList(),
     val connectingSourceId: String? = null,
+    val navigateToPdfUpload: Boolean = false,
     val authMessage: String? = null,
     val authMessageType: AuthMessageType? = null,
 )
@@ -182,7 +203,10 @@ class SourcesViewModel(
         // Listen for deep link results
         scope.launch {
             DeepLinkHandler.authResultFlow.collect { result ->
-                handleAuthResult(result)
+                result?.let {
+                    handleAuthResult(it)
+                    DeepLinkHandler.clearAuthResult()
+                }
             }
         }
     }
@@ -208,6 +232,10 @@ class SourcesViewModel(
     }
 
     fun connectSource(sourceId: String) {
+        if (sourceId == "pdf_upload") {
+            _uiState.update { it.copy(navigateToPdfUpload = true) }
+            return
+        }
         _uiState.update { it.copy(connectingSourceId = sourceId) }
         scope.launch {
             val sourceType = mapSourceIdToType(sourceId)
@@ -278,16 +306,25 @@ class SourcesViewModel(
     fun clearAuthMessage() {
         _uiState.update { it.copy(authMessage = null, authMessageType = null) }
     }
+
+    fun onPdfUploadNavigated() {
+        _uiState.update { it.copy(navigateToPdfUpload = false) }
+    }
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
+    val userProfile: UserResponse? = null,
     val isSaved: Boolean = false,
+    val isLoading: Boolean = false,
 )
 
-class SettingsViewModel(private val settingsRepo: SettingsRepository) : BaseViewModel() {
+class SettingsViewModel(
+    private val settingsRepo: SettingsRepository,
+    private val authRepo: AuthRepository
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -297,6 +334,19 @@ class SettingsViewModel(private val settingsRepo: SettingsRepository) : BaseView
             settingsRepo.getSettings().collect { settings ->
                 _uiState.update { it.copy(settings = settings) }
             }
+        }
+        scope.launch {
+            authRepo.getUserProfile().collect { profile ->
+                _uiState.update { it.copy(userProfile = profile) }
+            }
+        }
+    }
+
+    fun logout() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            authRepo.logout()
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -348,5 +398,196 @@ class SavedViewModel(private val repository: SavedRepository) : BaseViewModel() 
                 loadSavedItems()
             }
         }
+    }
+}
+
+// ── Brain / Proactive Intelligence ──────────────────────────────────────────
+
+data class BrainUiState(
+    val isLoading: Boolean = false,
+    val today: BrainToday? = null,
+    val missing: BrainMissing? = null,
+    val connections: List<BrainConnection> = emptyList(),
+    val alerts: List<BrainAlert> = emptyList(),
+    val error: String? = null
+)
+
+class BrainViewModel(private val brainRepo: BrainRepository) : BaseViewModel() {
+    private val _uiState = MutableStateFlow(BrainUiState())
+    val uiState: StateFlow<BrainUiState> = _uiState.asStateFlow()
+
+    init {
+        loadBrainData()
+    }
+
+    fun loadBrainData() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            
+            // Combine multiple flows for a unified state
+            combine(
+                brainRepo.getBrainToday(),
+                brainRepo.getBrainMissing(),
+                brainRepo.getBrainConnections(),
+                brainRepo.getBrainAlerts()
+            ) { today, missing, connections, alerts ->
+                BrainUiState(
+                    isLoading = false,
+                    today = today,
+                    missing = missing,
+                    connections = connections,
+                    alerts = alerts
+                )
+            }.catch { e ->
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }.collect { state ->
+                _uiState.value = state
+            }
+        }
+    }
+
+    fun dismissAlert(id: String) {
+        // Logic to dismiss a single alert if backend supports it
+        _uiState.update { it.copy(alerts = it.alerts.filter { a -> a.id != id }) }
+    }
+
+    fun clearAllAlerts() {
+        scope.launch {
+            brainRepo.clearAlerts().onSuccess {
+                _uiState.update { it.copy(alerts = emptyList()) }
+            }
+        }
+    }
+}
+
+// ── Ingest Job Tracking ───────────────────────────────────────────────────────
+
+data class IngestUiState(
+    val recentJobs: List<IngestJob> = emptyList(),
+    val activeJobs: List<IngestJob> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+class IngestViewModel(private val ingestRepo: IngestRepository) : BaseViewModel() {
+    private val _uiState = MutableStateFlow(IngestUiState())
+    val uiState: StateFlow<IngestUiState> = _uiState.asStateFlow()
+
+    init {
+        loadJobs()
+    }
+
+    fun loadJobs() {
+        scope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            ingestRepo.getRecentJobs().collect { jobs ->
+                val active = jobs.filter { it.status in listOf("started", "queued", "processing") }
+                _uiState.update { it.copy(recentJobs = jobs, activeJobs = active, isLoading = false) }
+            }
+        }
+    }
+
+    fun triggerSyncAll() {
+        scope.launch {
+            ingestRepo.triggerAllIngest().onSuccess { _ ->
+                _uiState.update { it.copy(error = null) }
+                loadJobs()
+                // Poll job status until all complete
+                pollJobsUntilComplete()
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun triggerSourceSync(sourceId: String) {
+        scope.launch {
+            ingestRepo.triggerIngest(sourceId).onSuccess { _ ->
+                _uiState.update { it.copy(error = null) }
+                loadJobs()
+                // Poll this job until complete
+                pollJobsUntilComplete()
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    private suspend fun pollJobsUntilComplete() {
+        var hasActiveJobs = true
+        var pollCount = 0
+        val maxPolls = 300  // Max 5 minutes at 1s interval
+        
+        while (hasActiveJobs && pollCount < maxPolls) {
+            delay(1000)  // Poll every 1 second
+            pollCount++
+            
+            try {
+                ingestRepo.getRecentJobs().collect { jobs ->
+                    val active = jobs.filter { it.status in listOf("started", "queued", "processing") }
+                    _uiState.update { it.copy(recentJobs = jobs, activeJobs = active) }
+                    hasActiveJobs = active.isNotEmpty()
+                }
+            } catch (_: Exception) {
+                // Continue polling on error
+            }
+        }
+    }
+}
+
+// ── Notifications / FCM ────────────────────────────────────────────────────────
+
+data class NotificationUiState(
+    val fcmToken: String? = null,
+    val digestNotificationsEnabled: Boolean = true,
+    val isRegistering: Boolean = false,
+    val error: String? = null
+)
+
+class NotificationViewModel(private val notificationRepo: NotificationRepository) : BaseViewModel() {
+    private val _uiState = MutableStateFlow(NotificationUiState())
+    val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
+
+    init {
+        // Listen for FCM token changes and check notification preferences
+        scope.launch {
+            notificationRepo.getFcmTokenStream().collect { token ->
+                _uiState.update { it.copy(fcmToken = token) }
+                if (token != null) {
+                    registerToken(token)
+                }
+            }
+        }
+
+        // Load notification preferences
+        scope.launch {
+            val enabled = notificationRepo.isDigestNotificationEnabled()
+            _uiState.update { it.copy(digestNotificationsEnabled = enabled) }
+        }
+    }
+
+    fun registerToken(token: String) {
+        scope.launch {
+            _uiState.update { it.copy(isRegistering = true, error = null) }
+            notificationRepo.registerToken(token).onSuccess {
+                _uiState.update { it.copy(isRegistering = false) }
+            }.onFailure { e ->
+                _uiState.update { it.copy(isRegistering = false, error = e.message) }
+            }
+        }
+    }
+
+    fun toggleDigestNotifications(enabled: Boolean) {
+        scope.launch {
+            notificationRepo.setDigestNotificationEnabled(enabled).onSuccess {
+                _uiState.update { it.copy(digestNotificationsEnabled = enabled) }
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }

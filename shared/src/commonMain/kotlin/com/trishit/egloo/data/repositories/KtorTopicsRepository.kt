@@ -1,6 +1,5 @@
 package com.trishit.egloo.data.repositories
 
-import com.trishit.egloo.data.api.TopicListResponse
 import com.trishit.egloo.data.api.TopicResponse
 import com.trishit.egloo.data.api.toDomain
 import com.trishit.egloo.domain.models.Topic
@@ -20,8 +19,8 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
         try {
             val response = client.get("/api/v1/topics")
             if (response.status.value == 200) {
-                val listResponse = response.body<TopicListResponse>()
-                emit(listResponse.topics.map { it.toDomain() })
+                val topics = response.body<List<TopicResponse>>()
+                emit(topics.map { it.toDomain() })
             } else {
                 emit(emptyList())
             }
@@ -59,7 +58,7 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
 
     override suspend fun triggerTopicGeneration(): Result<Unit> {
         return try {
-            val response = client.post("/api/v1/ingest/trigger-all")
+            val response = client.post("/api/v1/topics/refresh")
             if (response.status.isSuccess()) Result.success(Unit)
             else Result.failure(Exception("Failed to trigger generation: ${response.status}"))
         } catch (e: Exception) {
