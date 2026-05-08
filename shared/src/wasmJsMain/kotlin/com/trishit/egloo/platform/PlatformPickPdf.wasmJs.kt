@@ -4,9 +4,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.browser.document
 import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
+import org.w3c.files.get
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+@OptIn(ExperimentalWasmJsInterop::class)
 actual suspend fun platformPickPdf(): PickedFile? = suspendCancellableCoroutine { cont ->
 	try {
 		val input = document.createElement("input") as HTMLInputElement
