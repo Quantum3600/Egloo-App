@@ -35,22 +35,36 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
 
     override suspend fun connectSource(type: SourceType) {
         val typeStr = when (type) {
-            SourceType.GOOGLE_DRIVE, SourceType.DRIVE -> "gmail" // Mapping Drive to Gmail flow as per API summary
+            SourceType.GOOGLE_DRIVE, SourceType.DRIVE -> "google_drive"
+            SourceType.GMAIL -> "gmail"
+            SourceType.SLACK -> "slack"
+            SourceType.NOTION -> "notion"
             else -> type.name.lowercase()
         }
+        
         try {
+            // Use a separate request to avoid interceptor if needed, 
+            // but usually we want to be authenticated to connect a source.
             val response = client.get("/api/v1/sources/connect/$typeStr")
-            if (response.status.value == 200 || response.status.value == 307 || response.status.value == 308) {
-                // Server may return redirect or JSON with oauthUrl
-                val oauthUrl = try {
+            
+            val oauthUrl = when (response.status.value) {
+                200 -> {
                     val body = response.body<Map<String, String>>()
                     body["oauthUrl"]
-                } catch (_: Exception) {
-                    response.headers["Location"] // Redirect URL in header
                 }
-                oauthUrl?.let { platformOpenUrl(it) }
+                301, 302, 303, 307, 308 -> {
+                    response.headers["Location"]
+                }
+                else -> null
+            }
+
+            if (oauthUrl != null) {
+                platformOpenUrl(oauthUrl)
+            } else {
+                println("Error: No OAuth URL found in response for $typeStr (Status: ${response.status})")
             }
         } catch (e: Exception) {
+            println("Exception connecting to source $typeStr: ${e.message}")
             e.printStackTrace()
         }
     }

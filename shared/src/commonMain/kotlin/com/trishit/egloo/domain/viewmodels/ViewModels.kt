@@ -522,11 +522,11 @@ class IngestViewModel(
 
     fun triggerSyncAll() {
         scope.launch {
-            ingestRepo.triggerAllIngest().onSuccess { _ ->
+            ingestRepo.triggerAllIngest().onSuccess { jobIds ->
                 _uiState.update { it.copy(error = null) }
                 loadJobs()
                 // Poll job status until all complete
-                pollJobsUntilComplete()
+                pollJobsUntilComplete(jobIds)
             }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -535,34 +535,53 @@ class IngestViewModel(
 
     fun triggerSourceSync(sourceId: String) {
         scope.launch {
-            ingestRepo.triggerIngest(sourceId).onSuccess { _ ->
+            ingestRepo.triggerIngest(sourceId).onSuccess { jobId ->
                 _uiState.update { it.copy(error = null) }
                 loadJobs()
                 // Poll this job until complete
-                pollJobsUntilComplete()
+                pollJobsUntilComplete(listOf(jobId))
             }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message) }
             }
         }
     }
 
-    private suspend fun pollJobsUntilComplete() {
-        var hasActiveJobs = true
-        var pollCount = 0
-        val maxPolls = 300  // Max 5 minutes at 1s interval
+    private suspend fun pollJobsUntilComplete(jobIds: List<String>) {
+        if (jobIds.isEmpty()) return
         
-        while (hasActiveJobs && pollCount < maxPolls) {
-            delay(1000)  // Poll every 1 second
+        val pendingJobIds = jobIds.toMutableSet()
+        var pollCount = 0
+        val maxPolls = 150  // 5 minutes at 2s interval
+        
+        while (pendingJobIds.isNotEmpty() && pollCount < maxPolls) {
+            delay(2000)  // Poll every 2 seconds
             pollCount++
             
-            try {
-                ingestRepo.getRecentJobs().collect { jobs ->
-                    val active = jobs.filter { it.status in listOf("started", "queued", "processing") }
-                    _uiState.update { it.copy(recentJobs = jobs, activeJobs = active) }
-                    hasActiveJobs = active.isNotEmpty()
+            val currentPending = pendingJobIds.toList()
+            for (jobId in currentPending) {
+                try {
+                    ingestRepo.getJobStatus(jobId).firstOrNull()?.let { job ->
+                        // Update the job in the list
+                        _uiState.update { state ->
+                            val updatedJobs = state.recentJobs.toMutableList()
+                            val index = updatedJobs.indexOfFirst { it.id == jobId }
+                            if (index != -1) {
+                                updatedJobs[index] = job
+                            } else if (updatedJobs.size < 50) { // Limit size
+                                updatedJobs.add(0, job)
+                            }
+                            
+                            val active = updatedJobs.filter { it.status in listOf("started", "queued", "processing") }
+                            state.copy(recentJobs = updatedJobs, activeJobs = active)
+                        }
+                        
+                        if (job.status !in listOf("started", "queued", "processing")) {
+                            pendingJobIds.remove(jobId)
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Continue polling on error
                 }
-            } catch (_: Exception) {
-                // Continue polling on error
             }
         }
     }

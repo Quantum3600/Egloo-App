@@ -12,7 +12,8 @@ import kotlinx.serialization.json.Json
 
 fun createHttpClient(
     baseUrl: String,
-    tokenProvider: () -> String?
+    tokenProvider: () -> String?,
+    refreshTokenProvider: suspend () -> Result<TokenResponse>
 ) = HttpClient(platformEngine()) {
     defaultRequest {
         url(baseUrl)
@@ -30,6 +31,16 @@ fun createHttpClient(
         bearer {
             loadTokens {
                 tokenProvider()?.let { BearerTokens(it, "") }
+            }
+            refreshTokens {
+                val result = refreshTokenProvider()
+                result.getOrNull()?.let {
+                    BearerTokens(it.access_token, it.refresh_token)
+                }
+            }
+            // Send token for all requests to the base URL
+            sendWithoutRequest { request ->
+                request.url.toString().startsWith(baseUrl)
             }
         }
     }

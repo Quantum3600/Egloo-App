@@ -45,7 +45,7 @@ interface TopicsRepository {
 
 interface SourcesRepository {
     fun getConnectedSources(): Flow<List<ConnectedSource>>
-    /** Triggers mock OAuth flow. Real implementation opens a browser/WebView. */
+    /** Opens a browser/WebView to start the OAuth flow. */
     suspend fun connectSource(type: SourceType)
     suspend fun disconnectSource(id: String)
 }

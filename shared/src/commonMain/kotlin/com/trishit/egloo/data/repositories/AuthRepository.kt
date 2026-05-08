@@ -1,14 +1,17 @@
 package com.trishit.egloo.data.repositories
 
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.set
 import com.trishit.egloo.data.api.*
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.Json
 
 interface AuthRepository {
     val isAuthenticated: StateFlow<Boolean>
@@ -16,6 +19,8 @@ interface AuthRepository {
     suspend fun register(email: String, password: String, name: String): Result<Unit>
     suspend fun logout(): Result<Unit>
     fun getToken(): String?
+    fun getRefreshToken(): String?
+    suspend fun refreshToken(): Result<TokenResponse>
     fun getUserProfile(): Flow<UserResponse?>
 }
 
@@ -27,15 +32,28 @@ class KtorAuthRepository(
     private val _isAuthenticated = MutableStateFlow(getToken() != null)
     override val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
+    // Separate client for auth operations to avoid circular dependency/interceptor issues
+    private val authClient = HttpClient(client.engine) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
+        }
+        defaultRequest {
+            url("https://egloo-backend.onrender.com")
+        }
+    }
+
     override suspend fun login(email: String, password: String): Result<Unit> {
         return try {
-            val response = client.post("/api/v1/auth/login") {
+            val response = authClient.post("/api/v1/auth/login") {
                 contentType(ContentType.Application.Json)
                 setBody(UserLoginRequest(email, password))
             }
             if (response.status.isSuccess()) {
                 val tokens = response.body<TokenResponse>()
-                settings.putString("access_token", tokens.access_token)
+                saveTokens(tokens)
                 _isAuthenticated.value = true
                 Result.success(Unit)
             } else {
@@ -49,7 +67,7 @@ class KtorAuthRepository(
 
     override suspend fun register(email: String, password: String, name: String): Result<Unit> {
         return try {
-            val response = client.post("/api/v1/auth/register") {
+            val response = authClient.post("/api/v1/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody(UserRegisterRequest(email, password, name))
             }
@@ -66,18 +84,55 @@ class KtorAuthRepository(
     override suspend fun logout(): Result<Unit> {
         return try {
             client.post("/api/v1/auth/logout")
-            settings.remove("access_token")
+            clearTokens()
             _isAuthenticated.value = false
             Result.success(Unit)
         } catch (e: Exception) {
-            settings.remove("access_token")
+            clearTokens()
             _isAuthenticated.value = false
             Result.failure(e)
         }
     }
 
-    override fun getToken(): String? {
-        return settings.getStringOrNull("access_token")
+    override fun getToken(): String? = settings.getStringOrNull("access_token")
+    
+    override fun getRefreshToken(): String? = settings.getStringOrNull("refresh_token")
+
+    override suspend fun refreshToken(): Result<TokenResponse> {
+        val refreshToken = getRefreshToken() ?: return Result.failure(Exception("No refresh token available"))
+        
+        return try {
+            val response = authClient.post("/api/v1/auth/refresh") {
+                contentType(ContentType.Application.Json)
+                // Sending refresh token in header or body as per backend requirement
+                // Based on common patterns and API_REFERENCE hints, let's try body if not specified
+                // Or if it's a bearer token flow for refresh too? 
+                // Usually it's a POST with the refresh token.
+                header(HttpHeaders.Authorization, "Bearer $refreshToken")
+            }
+            
+            if (response.status.isSuccess()) {
+                val tokens = response.body<TokenResponse>()
+                saveTokens(tokens)
+                Result.success(tokens)
+            } else {
+                clearTokens()
+                _isAuthenticated.value = false
+                Result.failure(Exception("Refresh failed: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun saveTokens(tokens: TokenResponse) {
+        settings.putString("access_token", tokens.access_token)
+        settings.putString("refresh_token", tokens.refresh_token)
+    }
+
+    private fun clearTokens() {
+        settings.remove("access_token")
+        settings.remove("refresh_token")
     }
 
     override fun getUserProfile(): Flow<UserResponse?> = flow {
