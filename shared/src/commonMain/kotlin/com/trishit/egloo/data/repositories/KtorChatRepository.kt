@@ -72,50 +72,67 @@ class KtorChatRepository(
         )
         _messages.update { it + pingoMsg }
 
-        try {
-            client.preparePost("/api/v1/query/ask/stream") {
-                contentType(ContentType.Application.Json)
-                setBody(AskRequest(question = text))
-            }.execute { response ->
-                val channel = response.bodyAsChannel()
-                var fullText = ""
-                while (!channel.isClosedForRead) {
-                    val line = channel.readUTF8Line() ?: break
-                    if (line.startsWith("data:")) {
-                        val data = line.removePrefix("data:").trim()
-                        if (data == "[DONE]") break
-                        
-                        try {
-                            val event = json.decodeFromString<ChatEventDto>(data)
-                            when (event.type) {
-                                "token" -> {
-                                    fullText += event.token ?: ""
-                                    updatePingoMessage(pingoId, fullText, isStreaming = true)
-                                }
-                                "sources" -> {
-                                    val sources = event.sources?.map { 
-                                        ChatSource(it.source_name_fallback(), it.source_type_to_domain())
-                                    } ?: emptyList()
-                                    updatePingoMessage(
-                                        pingoId, 
-                                        fullText, 
-                                        isStreaming = true, 
-                                        sources = sources,
-                                        modelUsed = event.model
-                                    )
-                                }
-                                "done" -> {
-                                    updatePingoMessage(pingoId, fullText, isStreaming = false, modelUsed = event.model)
+        var retryCount = 0
+        val maxRetries = 3
+        var success = false
+
+        while (retryCount < maxRetries && !success) {
+            try {
+                client.preparePost("/api/v1/query/ask/stream") {
+                    contentType(ContentType.Application.Json)
+                    setBody(AskRequest(question = text))
+                }.execute { response ->
+                    if (response.status.isSuccess()) {
+                        success = true
+                        val channel = response.bodyAsChannel()
+                        var fullText = ""
+                        while (!channel.isClosedForRead) {
+                            val line = channel.readUTF8Line() ?: break
+                            if (line.startsWith("data:")) {
+                                val data = line.removePrefix("data:").trim()
+                                if (data == "[DONE]") break
+                                
+                                try {
+                                    val event = json.decodeFromString<ChatEventDto>(data)
+                                    when (event.type) {
+                                        "token" -> {
+                                            fullText += event.token ?: ""
+                                            updatePingoMessage(pingoId, fullText, isStreaming = true)
+                                        }
+                                        "sources" -> {
+                                            val sources = event.sources?.map { 
+                                                ChatSource(it.source_name_fallback(), it.source_type_to_domain())
+                                            } ?: emptyList()
+                                            updatePingoMessage(
+                                                pingoId, 
+                                                fullText, 
+                                                isStreaming = true, 
+                                                sources = sources,
+                                                modelUsed = event.model
+                                            )
+                                        }
+                                        "done" -> {
+                                            updatePingoMessage(pingoId, fullText, isStreaming = false, modelUsed = event.model)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    // Skip malformed chunks
                                 }
                             }
-                        } catch (e: Exception) {
-                            // Skip malformed chunks
                         }
+                    } else {
+                        throw Exception("Server returned ${response.status}")
                     }
                 }
+            } catch (e: Exception) {
+                retryCount++
+                if (retryCount >= maxRetries) {
+                    updatePingoMessage(pingoId, "Error: ${e.message}. Please try again later.", isStreaming = false)
+                } else {
+                    // Exponential backoff
+                    kotlinx.coroutines.delay(1000L * retryCount)
+                }
             }
-        } catch (e: Exception) {
-            updatePingoMessage(pingoId, "Error: ${e.message}", isStreaming = false)
         }
     }
 

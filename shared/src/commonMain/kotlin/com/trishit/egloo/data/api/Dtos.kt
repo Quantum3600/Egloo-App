@@ -39,6 +39,19 @@ data class UserResponse(
     val created_at: String
 )
 
+// ── Notification DTOs ────────────────────────────────────────────────────────
+
+@Serializable
+data class NotificationRegisterRequest(
+    val fcm_token: String,
+    val device_type: String = "android" // Default, will be updated by platform
+)
+
+@Serializable
+data class NotificationPreferenceRequest(
+    val digest_enabled: Boolean
+)
+
 // ── Digest DTOs ──────────────────────────────────────────────────────────────
 
 @Serializable
@@ -310,7 +323,32 @@ data class SavedListResponse(
     val total: Int
 )
 
+@Serializable
+data class AppSettingsDto(
+    val user_name: String,
+    val dark_theme: Boolean,
+    val pingo_greetings_enabled: Boolean,
+    val digest_notifications_enabled: Boolean,
+    val sync_frequency_hours: Int
+)
+
 // ── Mappers ──────────────────────────────────────────────────────────────────
+
+fun AppSettingsDto.toDomain() = AppSettings(
+    userName = user_name,
+    darkTheme = dark_theme,
+    pingoGreetingsEnabled = pingo_greetings_enabled,
+    digestNotificationsEnabled = digest_notifications_enabled,
+    syncFrequencyHours = sync_frequency_hours
+)
+
+fun AppSettings.toDto() = AppSettingsDto(
+    user_name = userName,
+    dark_theme = darkTheme,
+    pingo_greetings_enabled = pingoGreetingsEnabled,
+    digest_notifications_enabled = digestNotificationsEnabled,
+    sync_frequency_hours = syncFrequencyHours
+)
 
 fun DigestResponse.toDomain(): DailyDigest {
     val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())

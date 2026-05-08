@@ -471,16 +471,32 @@ class BrainViewModel(private val brainRepo: BrainRepository) : BaseViewModel() {
 data class IngestUiState(
     val recentJobs: List<IngestJob> = emptyList(),
     val activeJobs: List<IngestJob> = emptyList(),
+    val healthStatus: HealthStatus? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
-class IngestViewModel(private val ingestRepo: IngestRepository) : BaseViewModel() {
+class IngestViewModel(
+    private val ingestRepo: IngestRepository,
+    private val healthRepo: HealthRepository
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(IngestUiState())
     val uiState: StateFlow<IngestUiState> = _uiState.asStateFlow()
 
     init {
         loadJobs()
+        monitorHealth()
+    }
+
+    private fun monitorHealth() {
+        scope.launch {
+            while (true) {
+                healthRepo.getHealthStatus().collect { status ->
+                    _uiState.update { it.copy(healthStatus = status) }
+                }
+                delay(30000) // Every 30 seconds
+            }
+        }
     }
 
     fun loadJobs() {
