@@ -54,7 +54,7 @@ class KtorChatRepository(
         }
     }
 
-    override suspend fun sendMessage(text: String) {
+    override suspend fun sendMessage(text: String, model: String?) {
         val now = currentTimeMillis()
         val userMsg = ChatMessage.User(
             id = "u_$now",
@@ -80,7 +80,7 @@ class KtorChatRepository(
             try {
                 client.preparePost("/api/v1/query/ask/stream") {
                     contentType(ContentType.Application.Json)
-                    setBody(AskRequest(question = text))
+                    setBody(AskRequest(question = text, model = model))
                 }.execute { response ->
                     if (response.status.isSuccess()) {
                         success = true

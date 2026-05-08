@@ -4,6 +4,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import com.trishit.egloo.data.repositories.HealthStatus
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.ui.theme.EglooColors
 import kotlin.time.Clock
@@ -407,6 +409,44 @@ fun IngestStatusIndicator(job: IngestJob, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
             )
+        }
+    }
+}
+
+// ── Celery Health Indicator ──────────────────────────────────────────────────
+
+@Composable
+fun CeleryHealthIndicator(status: HealthStatus?, modifier: Modifier = Modifier) {
+    val isOnline = status?.worker_status == "online" || status?.status == "healthy"
+    val color = if (isOnline) EglooColors.TealPrimary else MaterialTheme.colorScheme.error
+    val text = if (isOnline) "Pingo Workers: Online" else "Pingo Workers: Offline"
+    val icon = if (isOnline) Icons.Default.CheckCircle else Icons.Default.Warning
+
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = color.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.3f)),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color
+            )
+            if (status?.services?.isNotEmpty() == true) {
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "Healthy",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }

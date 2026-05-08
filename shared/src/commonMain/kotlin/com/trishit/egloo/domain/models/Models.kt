@@ -156,7 +156,8 @@ data class AppSettings(
     val darkTheme: Boolean = true, // Default to dark as per AGENTS.md
     val pingoGreetingsEnabled: Boolean = true,
     val digestNotificationsEnabled: Boolean = true,
-    val syncFrequencyHours: Int = 4
+    val syncFrequencyHours: Int = 4,
+    val preferredLlmModel: String = "gemini-1.5-pro"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

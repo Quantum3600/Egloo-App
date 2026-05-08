@@ -248,7 +248,8 @@ data class JobListResponse(
 @Serializable
 data class AskRequest(
     val question: String,
-    val use_cache: Boolean = true
+    val use_cache: Boolean = true,
+    val model: String? = null
 )
 
 @Serializable
@@ -329,7 +330,8 @@ data class AppSettingsDto(
     val dark_theme: Boolean,
     val pingo_greetings_enabled: Boolean,
     val digest_notifications_enabled: Boolean,
-    val sync_frequency_hours: Int
+    val sync_frequency_hours: Int,
+    val preferred_llm_model: String = "gemini-1.5-pro"
 )
 
 // ── Mappers ──────────────────────────────────────────────────────────────────
@@ -339,7 +341,8 @@ fun AppSettingsDto.toDomain() = AppSettings(
     darkTheme = dark_theme,
     pingoGreetingsEnabled = pingo_greetings_enabled,
     digestNotificationsEnabled = digest_notifications_enabled,
-    syncFrequencyHours = sync_frequency_hours
+    syncFrequencyHours = sync_frequency_hours,
+    preferredLlmModel = preferred_llm_model
 )
 
 fun AppSettings.toDto() = AppSettingsDto(
@@ -347,7 +350,8 @@ fun AppSettings.toDto() = AppSettingsDto(
     dark_theme = darkTheme,
     pingo_greetings_enabled = pingoGreetingsEnabled,
     digest_notifications_enabled = digestNotificationsEnabled,
-    sync_frequency_hours = syncFrequencyHours
+    sync_frequency_hours = syncFrequencyHours,
+    preferred_llm_model = preferredLlmModel
 )
 
 fun DigestResponse.toDomain(): DailyDigest {

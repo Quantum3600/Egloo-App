@@ -62,10 +62,15 @@ data class ChatUiState(
     val isTyping: Boolean = false,
 )
 
-class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
+class ChatViewModel(
+    private val chatRepo: ChatRepository,
+    private val settingsRepo: SettingsRepository
+) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    private var preferredModel: String? = null
 
     init {
         scope.launch {
@@ -81,6 +86,11 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
                 _uiState.update { it.copy(suggestions = suggestions) }
             }
         }
+        scope.launch {
+            settingsRepo.getSettings().collect { settings ->
+                preferredModel = settings.preferredLlmModel
+            }
+        }
     }
 
     fun onInputChanged(text: String) {
@@ -92,7 +102,7 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
         if (trimmedText.isBlank()) return
         _uiState.update { it.copy(isSending = true) }
         scope.launch {
-            chatRepo.sendMessage(trimmedText)
+            chatRepo.sendMessage(trimmedText, preferredModel)
             _uiState.update { it.copy(isSending = false) }
         }
     }
@@ -361,6 +371,7 @@ class SettingsViewModel(
     fun togglePingoGreetings(enabled: Boolean) = update { it.copy(pingoGreetingsEnabled = enabled) }
     fun toggleDigestNotifications(enabled: Boolean) = update { it.copy(digestNotificationsEnabled = enabled) }
     fun setSyncFrequency(hours: Int) = update { it.copy(syncFrequencyHours = hours) }
+    fun setPreferredLlmModel(model: String) = update { it.copy(preferredLlmModel = model) }
 
     private fun update(block: (AppSettings) -> AppSettings) {
         scope.launch {

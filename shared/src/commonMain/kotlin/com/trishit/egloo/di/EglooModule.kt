@@ -73,7 +73,7 @@ val eglooModule = module {
     // ── ViewModels ────────────────────────────────────────────────────────────
     factoryOf(::AuthViewModel)
     factoryOf(::HomeViewModel)
-    factoryOf(::ChatViewModel)
+    factory { ChatViewModel(get(), get()) }
     factoryOf(::TopicsViewModel)
     factoryOf(::SourcesViewModel)
     factoryOf(::SettingsViewModel)

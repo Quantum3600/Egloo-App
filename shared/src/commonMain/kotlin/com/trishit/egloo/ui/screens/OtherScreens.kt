@@ -4,6 +4,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -291,6 +292,8 @@ fun SourcesScreen(
             }
         }
 
+        item { CeleryHealthIndicator(ingestState.healthStatus) }
+
         item { Spacer(Modifier.height(8.dp)) }
 
         // Show active ingestion jobs
@@ -490,6 +493,44 @@ fun SettingsScreen(
                     hours = settings.syncFrequencyHours,
                     onSelect = viewModel::setSyncFrequency,
                 )
+            }
+        }
+
+        item {
+            SettingsSection("Intelligence") {
+                Text("Preferred AI Model", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Select which brain Pingo uses to process your data",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                
+                val models = listOf(
+                    "gemini-1.5-pro" to "Gemini 1.5 Pro (Balanced)",
+                    "llama-3-70b-groq" to "Llama 3 70B (Fast)",
+                    "gpt-4o" to "GPT-4o (Premium)"
+                )
+                
+                models.forEach { (id, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = settings.preferredLlmModel == id,
+                                onClick = { viewModel.setPreferredLlmModel(id) }
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = settings.preferredLlmModel == id,
+                            onClick = { viewModel.setPreferredLlmModel(id) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
 

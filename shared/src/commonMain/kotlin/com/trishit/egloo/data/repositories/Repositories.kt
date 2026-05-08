@@ -29,7 +29,7 @@ interface ChatRepository {
     /** Loads suggested questions from backend. */
     fun getSuggestions(): Flow<List<String>>
     /** Sends a user message. Pingo's reply will be emitted into getChatHistory(). */
-    suspend fun sendMessage(text: String)
+    suspend fun sendMessage(text: String, model: String? = null)
     /** Clears the conversation. */
     suspend fun clearHistory()
     /** Saves a chat result as a bookmark. */
