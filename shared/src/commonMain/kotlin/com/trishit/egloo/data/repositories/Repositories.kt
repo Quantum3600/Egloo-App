@@ -26,6 +26,8 @@ interface ChatRepository {
     fun getChatHistory(): Flow<List<ChatMessage>>
     /** Loads history from backend. */
     suspend fun loadHistory()
+    /** Loads suggested questions from backend. */
+    fun getSuggestions(): Flow<List<String>>
     /** Sends a user message. Pingo's reply will be emitted into getChatHistory(). */
     suspend fun sendMessage(text: String)
     /** Clears the conversation. */

@@ -144,6 +144,18 @@ class KtorChatRepository(
         _messages.value = emptyList()
     }
 
+    override fun getSuggestions(): Flow<List<String>> = flow {
+        try {
+            val response = client.get("/api/v1/query/suggest")
+            if (response.status.isSuccess()) {
+                val body = response.body<Map<String, List<String>>>()
+                emit(body["suggestions"] ?: emptyList())
+            }
+        } catch (e: Exception) {
+            emit(emptyList())
+        }
+    }
+
     override suspend fun saveMessage(id: String): Result<Unit> {
         return try {
             // Mapping chat message id to query history id
