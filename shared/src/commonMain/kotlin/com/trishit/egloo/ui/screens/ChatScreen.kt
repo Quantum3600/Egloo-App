@@ -93,6 +93,28 @@ fun PingoScreen(
             if (state.isTyping) {
                 item { TypingIndicator() }
             }
+
+            if (state.messages.isEmpty() && state.suggestions.isNotEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Try asking Pingo:",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        state.suggestions.forEach { suggestion ->
+                            SuggestionChip(
+                                onClick = { viewModel.sendMessage(suggestion) },
+                                label = { Text(suggestion) }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -34,7 +34,10 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
     }
 
     override suspend fun connectSource(type: SourceType) {
-        val typeStr = type.name.lowercase()
+        val typeStr = when (type) {
+            SourceType.GOOGLE_DRIVE, SourceType.DRIVE -> "gmail" // Mapping Drive to Gmail flow as per API summary
+            else -> type.name.lowercase()
+        }
         try {
             val response = client.get("/api/v1/sources/connect/$typeStr")
             if (response.status.value == 200 || response.status.value == 307 || response.status.value == 308) {

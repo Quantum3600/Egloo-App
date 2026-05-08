@@ -56,6 +56,7 @@ class HomeViewModel(private val digestRepo: DigestRepository) : BaseViewModel() 
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
+    val suggestions: List<String> = emptyList(),
     val inputText: String = "",
     val isSending: Boolean = false,
     val isTyping: Boolean = false,
@@ -73,6 +74,11 @@ class ChatViewModel(private val chatRepo: ChatRepository) : BaseViewModel() {
         scope.launch {
             chatRepo.getChatHistory().collect { messages ->
                 _uiState.update { it.copy(messages = messages) }
+            }
+        }
+        scope.launch {
+            chatRepo.getSuggestions().collect { suggestions ->
+                _uiState.update { it.copy(suggestions = suggestions) }
             }
         }
     }
