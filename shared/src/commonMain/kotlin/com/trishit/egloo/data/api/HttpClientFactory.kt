@@ -46,8 +46,12 @@ fun createHttpClient(
     }
 
     install(Logging) {
-        level = LogLevel.INFO // Adjust to BODY for deep debugging
-        logger = Logger.DEFAULT
+        level = LogLevel.HEADERS // Use HEADERS to avoid buffering the body (which kills SSE)
+        logger = object : Logger {
+            override fun log(message: String) {
+                println("Ktor: $message")
+            }
+        }
     }
 
     install(HttpTimeout) {

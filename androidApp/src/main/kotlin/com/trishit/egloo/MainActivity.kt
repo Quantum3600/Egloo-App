@@ -23,13 +23,13 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
+        // Initialize Android file picker bridge BEFORE super.onCreate
+        AndroidFilePicker.init(this)
         super.onCreate(savedInstanceState)
 
         // Provide application context for platform helpers
         androidAppContext = applicationContext
 
-        // Initialize Android file picker bridge
-        AndroidFilePicker.init(this)
         handleIntent(intent)
 
         val authRepo: AuthRepository = get()

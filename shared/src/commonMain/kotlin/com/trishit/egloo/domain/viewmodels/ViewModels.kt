@@ -4,6 +4,7 @@ import com.trishit.egloo.data.api.*
 import com.trishit.egloo.data.repositories.*
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.platform.DeepLinkHandler
+import com.trishit.egloo.platform.currentTimeMillis
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -262,8 +263,8 @@ class SourcesViewModel(
         }
     }
 
-    fun disconnectSource(id: String) {
-        scope.launch { connectedSourcesRepo.disconnectSource(id) }
+    fun disconnectSource(sourceId: String) {
+        scope.launch { connectedSourcesRepo.disconnectSource(sourceId) }
     }
 
     private fun mapSourceIdToType(sourceId: String): SourceType? {
@@ -494,6 +495,10 @@ class IngestViewModel(
     private val _uiState = MutableStateFlow(IngestUiState())
     val uiState: StateFlow<IngestUiState> = _uiState.asStateFlow()
 
+    // Track the last time health check was performed to prevent multiple simultaneous checks
+    private var lastHealthCheckTime = 0L
+    private val HEALTH_CHECK_INTERVAL = 300_000L  // 5 minutes in milliseconds
+
     init {
         loadJobs()
         monitorHealth()
@@ -502,10 +507,21 @@ class IngestViewModel(
     private fun monitorHealth() {
         scope.launch {
             while (true) {
-                healthRepo.getHealthStatus().collect { status ->
-                    _uiState.update { it.copy(healthStatus = status) }
+                val now = currentTimeMillis()
+                // Only perform health check if at least 5 minutes have passed since the last one
+                if (now - lastHealthCheckTime >= HEALTH_CHECK_INTERVAL) {
+                    lastHealthCheckTime = now
+                    try {
+                        healthRepo.getHealthStatus().collect { status ->
+                            _uiState.update { it.copy(healthStatus = status) }
+                        }
+                    } catch (e: Exception) {
+                        // Log error but don't crash the monitoring loop
+                        println("IngestViewModel: Health check failed: ${e.message}")
+                    }
                 }
-                delay(30000) // Every 30 seconds
+                // Check every 30 seconds if we need to run health check
+                delay(30_000)
             }
         }
     }

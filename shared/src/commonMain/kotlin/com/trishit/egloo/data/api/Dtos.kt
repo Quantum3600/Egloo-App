@@ -289,7 +289,8 @@ data class SourceCitationDto(
     val subject: String? = "",
     val timestamp: String? = "",
     val content_preview: String,
-    val similarity: Float? = 0f
+    val similarity: Float? = 0f,
+    val page_number: Int? = null
 )
 
 @Serializable
@@ -522,12 +523,16 @@ fun AvailableSourceDto.toDomain() = AvailableSource(
 )
 
 fun PdfUploadResponse.toDomain() = UploadedPdf(
-    id = id,
-    filename = filename,
-    pages = pages,
-    status = status,
-    uploadedAt = uploaded_at,
-    fileSize = file_size,
+    id = id ?: document_id ?: "",
+    filename = filename ?: "document.pdf",
+    pages = pages ?: 0,
+    status = status ?: when {
+        chunks_created != null -> "indexed"
+        job_id != null -> "processing"
+        else -> "processing"
+    },
+    uploadedAt = uploaded_at ?: "Just now",
+    fileSize = file_size ?: 0,
     errorMessage = error_message
 )
 
@@ -535,12 +540,16 @@ fun PdfUploadResponse.toDomain() = UploadedPdf(
 
 @Serializable
 data class PdfUploadResponse(
-    val id: String,
-    val filename: String,
-    val pages: Int,
-    val status: String,  // "processing", "indexed", "failed"
-    val uploaded_at: String,
-    val file_size: Long,
+    val message: String? = null,
+    val document_id: String? = null,
+    val job_id: String? = null,
+    val chunks_created: Int? = null,
+    val id: String? = null,
+    val filename: String? = null,
+    val pages: Int? = null,
+    val status: String? = null,
+    val uploaded_at: String? = null,
+    val file_size: Long? = null,
     val error_message: String? = null
 )
 

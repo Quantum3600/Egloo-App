@@ -1,5 +1,6 @@
 package com.trishit.egloo.domain.viewmodels
 
+import com.russhwolf.settings.Settings
 import com.trishit.egloo.data.repositories.PdfRepository
 import com.trishit.egloo.domain.models.UploadedPdf
 import kotlinx.coroutines.delay
@@ -8,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 // ── PDF Upload ────────────────────────────────────────────────────────────────
 
@@ -25,36 +29,60 @@ data class PdfUiState(
     val isLoading: Boolean = false
 )
 
-class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
+class PdfViewModel(
+    private val pdfRepo: PdfRepository,
+    private val settings: Settings
+) : BaseViewModel() {
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val STORAGE_KEY = "persisted_pdfs"
 
     private val _uiState = MutableStateFlow(PdfUiState())
     val uiState: StateFlow<PdfUiState> = _uiState.asStateFlow()
 
     init {
-        loadUploadedPdfs()
+        loadPersistedPdfs()
     }
 
-    private fun loadUploadedPdfs() {
-        scope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            pdfRepo.getUploadedPdfs().collect { pdfs ->
-                _uiState.update { it.copy(uploadedPdfs = pdfs, isLoading = false) }
+    private fun loadPersistedPdfs() {
+        val savedJson = settings.getStringOrNull(STORAGE_KEY)
+        if (savedJson != null) {
+            try {
+                val pdfs = json.decodeFromString<List<UploadedPdf>>(savedJson)
+                _uiState.update { it.copy(uploadedPdfs = pdfs) }
+            } catch (e: Exception) {
+                println("PdfViewModel: Error loading persisted PDFs: ${e.message}")
             }
+        }
+        // Also try fetching from backend once, but don't rely on it
+        refreshUploadedPdfs()
+    }
+
+    private fun persistPdfs(pdfs: List<UploadedPdf>) {
+        try {
+            val savedJson = json.encodeToString(pdfs)
+            settings.putString(STORAGE_KEY, savedJson)
+        } catch (e: Exception) {
+            println("PdfViewModel: Error persisting PDFs: ${e.message}")
         }
     }
 
     fun uploadPdf(filename: String, fileBytes: ByteArray) {
+        println("PdfViewModel: uploadPdf called for $filename (${fileBytes.size} bytes)")
         // Validate file
         when {
             fileBytes.isEmpty() -> {
+                println("PdfViewModel: Validation failed - File is empty")
                 _uiState.update { it.copy(errorMessage = "File is empty") }
                 return
             }
             fileBytes.size > 50 * 1024 * 1024 -> { // 50MB limit
+                println("PdfViewModel: Validation failed - File too large")
                 _uiState.update { it.copy(errorMessage = "File is too large (max 50MB)") }
                 return
             }
             !filename.endsWith(".pdf", ignoreCase = true) -> {
+                println("PdfViewModel: Validation failed - Not a PDF: $filename")
                 _uiState.update { it.copy(errorMessage = "Only PDF files are allowed") }
                 return
             }
@@ -71,12 +99,23 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
         }
 
         scope.launch {
+            println("PdfViewModel: Launching repository upload request...")
             val result = pdfRepo.uploadPdf(filename, fileBytes)
 
             result.onSuccess { pdf ->
-                // Simulate progress
-                _uiState.update {
-                    it.copy(
+                println("PdfViewModel: Upload success! ID: ${pdf.id}, Status: ${pdf.status}")
+                
+                // Add to local list and persist IMMEDIATELY
+                val updatedPdf = pdf.copy(
+                    filename = filename, // Ensure filename is correct from local
+                    fileSize = fileBytes.size.toLong()
+                )
+                
+                _uiState.update { state ->
+                    val newList = (state.uploadedPdfs + updatedPdf).distinctBy { it.id }
+                    persistPdfs(newList)
+                    state.copy(
+                        uploadedPdfs = newList,
                         uploadProgress = 50,
                         uploadStatus = PdfProgressStatus.PROCESSING,
                         statusMessage = "Processing PDF..."
@@ -85,7 +124,7 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
 
                 delay(1500)
 
-                // Check final status from backend
+                // Check final status from backend (local simulation if status is null)
                 val finalStatus = when (pdf.status) {
                     "processing" -> {
                         _uiState.update { it.copy(uploadProgress = 75) }
@@ -97,11 +136,19 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
                         PdfProgressStatus.INDEXED
                     }
                     "failed" -> PdfProgressStatus.FAILED
-                    else -> PdfProgressStatus.IDLE
+                    else -> PdfProgressStatus.INDEXED // Assume success for frontend display if response was 200
                 }
+                
+                println("PdfViewModel: Final status mapped to $finalStatus")
 
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val newList = state.uploadedPdfs.map { 
+                        if (it.id == pdf.id) it.copy(status = if (finalStatus == PdfProgressStatus.INDEXED) "indexed" else it.status)
+                        else it
+                    }
+                    persistPdfs(newList)
+                    state.copy(
+                        uploadedPdfs = newList,
                         uploadStatus = finalStatus,
                         statusMessage = when (finalStatus) {
                             PdfProgressStatus.INDEXED -> "Ready to search!"
@@ -110,9 +157,6 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
                         }
                     )
                 }
-
-                // Refresh list
-                refreshUploadedPdfs()
 
                 // Auto-dismiss after 2 seconds if success
                 if (finalStatus == PdfProgressStatus.INDEXED) {
@@ -154,13 +198,15 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
 
     fun deletePdf(pdfId: String) {
         scope.launch {
-            val result = pdfRepo.deletePdf(pdfId)
-            result.onSuccess {
-                refreshUploadedPdfs()
+            // Optimistically remove from local list
+            _uiState.update { state ->
+                val newList = state.uploadedPdfs.filter { it.id != pdfId }
+                persistPdfs(newList)
+                state.copy(uploadedPdfs = newList)
             }
-            result.onFailure { error ->
-                _uiState.update { it.copy(errorMessage = error.message ?: "Delete failed") }
-            }
+            
+            // Try notifying backend but don't care if it fails
+            pdfRepo.deletePdf(pdfId)
         }
     }
 
@@ -184,10 +230,20 @@ class PdfViewModel(private val pdfRepo: PdfRepository) : BaseViewModel() {
         }
     }
 
-    private fun refreshUploadedPdfs() {
+    fun refreshUploadedPdfs() {
+        println("PdfViewModel: refreshUploadedPdfs triggered")
         scope.launch {
-            pdfRepo.getUploadedPdfs().collect { pdfs ->
-                _uiState.update { it.copy(uploadedPdfs = pdfs) }
+            pdfRepo.getUploadedPdfs().collect { backendPdfs ->
+                if (backendPdfs.isNotEmpty()) {
+                    println("PdfViewModel: Received ${backendPdfs.size} PDFs from backend")
+                    _uiState.update { state ->
+                        val merged = (state.uploadedPdfs + backendPdfs).distinctBy { it.id }
+                        persistPdfs(merged)
+                        state.copy(uploadedPdfs = merged, isLoading = false)
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             }
         }
     }

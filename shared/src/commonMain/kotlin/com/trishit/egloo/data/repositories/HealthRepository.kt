@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -32,7 +33,7 @@ class KtorHealthRepository(private val client: HttpClient) : HealthRepository {
         } catch (e: Exception) {
             emit(HealthStatus("unhealthy", mapOf("error" to (e.message ?: "Unknown error"))))
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
 
     override fun getBrainHealth(): Flow<HealthStatus> = flow {
         try {
@@ -45,5 +46,5 @@ class KtorHealthRepository(private val client: HttpClient) : HealthRepository {
         } catch (e: Exception) {
             emit(HealthStatus("unhealthy", mapOf("error" to (e.message ?: "Unknown error"))))
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
 }

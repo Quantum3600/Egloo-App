@@ -348,7 +348,9 @@ fun SourcesScreen(
                 sourceRow = row,
                 isConnecting = state.connectingSourceId == row.sourceId,
                 onConnect = { viewModel.connectSource(row.sourceId) },
-                onDisconnect = { row.connectedSource?.id?.let { viewModel.disconnectSource(it) } },
+                onDisconnect = { viewModel.disconnectSource(row.sourceId) },
+                onSync = { ingestViewModel.triggerSourceSync(row.sourceId) },
+                isSyncing = ingestState.activeJobs.any { it.sourceId == row.sourceId || it.sourceType == row.sourceId }
             )
         }
 
@@ -362,6 +364,8 @@ private fun SourceRowWithAvailable(
     isConnecting: Boolean,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
+    onSync: () -> Unit,
+    isSyncing: Boolean,
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -403,11 +407,31 @@ private fun SourceRowWithAvailable(
 
             when {
                 isConnecting -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                sourceRow.isConnected -> OutlinedButton(
-                    onClick = onDisconnect,
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-                ) {
-                    Text("Disconnect", style = MaterialTheme.typography.labelMedium)
+                sourceRow.isConnected -> {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (isSyncing) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            IconButton(
+                                onClick = onSync,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "Sync",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        
+                        OutlinedButton(
+                            onClick = onDisconnect,
+                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                        ) {
+                            Text("Disconnect", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
                 else -> Button(
                     onClick = onConnect,

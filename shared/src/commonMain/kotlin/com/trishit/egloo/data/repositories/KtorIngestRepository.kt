@@ -37,13 +37,20 @@ class KtorIngestRepository(private val client: HttpClient) : IngestRepository {
             val response = client.post("/api/v1/ingest/trigger/$sourceId")
             // Accept both 200 OK and 202 Accepted for async operations
             if (response.status.value in listOf(200, 202)) {
-                val dto = response.body<IngestResponse>()
-                Result.success(dto.job_id)
+                try {
+                    val dto = response.body<IngestResponse>()
+                    Result.success(dto.job_id)
+                } catch (_: Exception) {
+                    // Sometimes it might return a list even for single trigger
+                    val dtos = response.body<List<IngestResponse>>()
+                    Result.success(dtos.first().job_id)
+                }
             } else {
                 Result.failure(Exception("Failed to trigger ingest: ${response.status}"))
             }
-        } catch (_: Exception) {
-            Result.failure(Exception("Failed to trigger ingest"))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(Exception("Failed to trigger ingest: ${e.message}"))
         }
     }
 
@@ -52,13 +59,20 @@ class KtorIngestRepository(private val client: HttpClient) : IngestRepository {
             val response = client.post("/api/v1/ingest/trigger-all")
             // Accept both 200 OK and 202 Accepted for async operations
             if (response.status.value in listOf(200, 202)) {
-                val dtos = response.body<List<IngestResponse>>()
-                Result.success(dtos.map { it.job_id })
+                try {
+                    val dtos = response.body<List<IngestResponse>>()
+                    Result.success(dtos.map { it.job_id })
+                } catch (_: Exception) {
+                    // Fallback if it returns a single object instead of a list
+                    val dto = response.body<IngestResponse>()
+                    Result.success(listOf(dto.job_id))
+                }
             } else {
                 Result.failure(Exception("Failed to trigger all ingest: ${response.status}"))
             }
-        } catch (_: Exception) {
-            Result.failure(Exception("Failed to trigger all ingest"))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(Exception("Failed to trigger all ingest: ${e.message}"))
         }
     }
 }

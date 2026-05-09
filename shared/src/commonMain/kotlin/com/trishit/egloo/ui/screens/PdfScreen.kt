@@ -43,9 +43,7 @@ fun PdfScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        // Using re-indexing as a way to refresh if loadUploadedPdfs is private
-                        // But actually we want a public refresh method. 
-                        // For now let's just use what we have.
+                        viewModel.refreshUploadedPdfs()
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
@@ -57,8 +55,12 @@ fun PdfScreen(
                 onClick = {
                     if (!state.isUploading) {
                         scope.launch {
-                            val picked = platformPickPdf() ?: return@launch
-                            viewModel.uploadPdf(picked.filename, picked.bytes)
+                            val picked = platformPickPdf()
+                            if (picked != null) {
+                                // Use viewModel.scope to ensure the upload continues 
+                                // even if this UI scope is cancelled during recreation
+                                viewModel.uploadPdf(picked.filename, picked.bytes)
+                            }
                         }
                     }
                 },
@@ -77,6 +79,31 @@ fun PdfScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (state.errorMessage != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            state.errorMessage ?: "Unknown error",
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                        }
+                    }
+                }
+            }
+
             if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()

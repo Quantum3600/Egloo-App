@@ -54,8 +54,8 @@ val eglooModule = module {
     factoryOf(::SourcesViewModel)
     factoryOf(::SettingsViewModel)
     factoryOf(::SavedViewModel)
-    factoryOf(::PdfViewModel)
+    factory { PdfViewModel(get(), get()) }
     factoryOf(::BrainViewModel)
-    factory { IngestViewModel(get(), get()) }
+    single { IngestViewModel(get(), get()) }  // Changed to single to prevent multiple health monitoring loops
     factoryOf(::NotificationViewModel)
 }

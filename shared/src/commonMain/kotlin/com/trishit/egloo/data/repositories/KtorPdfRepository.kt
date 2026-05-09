@@ -8,8 +8,8 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
-import io.ktor.http.HttpHeaders.ContentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -17,19 +17,31 @@ class KtorPdfRepository(private val client: HttpClient) : PdfRepository {
     
     override fun getUploadedPdfs(): Flow<List<UploadedPdf>> = flow {
         try {
+            println("KtorPdfRepository: Fetching PDF list...")
             val response = client.get("/api/v1/ingest/pdfs")
-            if (response.status == HttpStatusCode.OK) {
+            println("KtorPdfRepository: PDF List Status: ${response.status}")
+            
+            val list = try {
                 val listResponse = response.body<PdfListResponse>()
-                emit(listResponse.pdfs.map { it.toDomain() })
-            } else {
-                emit(emptyList())
+                println("KtorPdfRepository: Parsed PdfListResponse with ${listResponse.pdfs.size} items")
+                listResponse.pdfs
+            } catch (e: Exception) {
+                // Backend might return the list directly without the wrapper
+                println("KtorPdfRepository: Wrapper parse failed, trying direct list...")
+                response.body<List<PdfUploadResponse>>()
             }
+            
+            println("KtorPdfRepository: Final count: ${list.size}")
+            emit(list.map { it.toDomain() })
         } catch (e: Exception) {
+            println("KtorPdfRepository: Error fetching PDFs: ${e.message}")
+            e.printStackTrace()
             emit(emptyList())
         }
     }
 
     override suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf> {
+        println("KtorPdfRepository: uploadPdf started for $filename")
         return try {
             val response = client.post("/api/v1/ingest/pdf") {
                 setBody(
@@ -37,19 +49,27 @@ class KtorPdfRepository(private val client: HttpClient) : PdfRepository {
                         formData {
                             append("file", fileBytes, Headers.build {
                                 append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                                append(HttpHeaders.ContentType, "application/pdf")
                             })
                         }
                     )
                 )
             }
+            
+            println("KtorPdfRepository: Server response: ${response.status}")
 
-            if (response.status == HttpStatusCode.OK) {
+            if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created || response.status == HttpStatusCode.Accepted) {
                 val dto = response.body<PdfUploadResponse>()
+                println("KtorPdfRepository: Parsed DTO: $dto")
                 Result.success(dto.toDomain())
             } else {
-                Result.failure(Exception("Upload failed: ${response.status}"))
+                val errorBody = try { response.bodyAsText() } catch (_: Exception) { "" }
+                println("KtorPdfRepository: Upload failed: $errorBody")
+                Result.failure(Exception("Upload failed (${response.status}): $errorBody"))
             }
         } catch (e: Exception) {
+            println("KtorPdfRepository: Exception during upload: ${e.message}")
+            e.printStackTrace()
             Result.failure(e)
         }
     }

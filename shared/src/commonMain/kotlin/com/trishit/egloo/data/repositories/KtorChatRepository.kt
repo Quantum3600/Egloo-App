@@ -88,12 +88,28 @@ class KtorChatRepository(
                         var fullText = ""
                         while (!channel.isClosedForRead) {
                             val line = channel.readUTF8Line() ?: break
-                            if (line.startsWith("data:")) {
-                                val data = line.removePrefix("data:").trim()
+                            if (line.isBlank()) continue
+                            
+                            // The server might send multiple "data: ..." events in a single line
+                            // or bundled in one read. Split by "data:" and process each.
+                            val dataParts = line.split("data:")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                            
+                            for (data in dataParts) {
                                 if (data == "[DONE]") break
                                 
                                 try {
-                                    val event = json.decodeFromString<ChatEventDto>(data)
+                                    // Strip literal \n and \r character sequences that might be trailing
+                                    // or embedded in the SSE data string, which cause JSON decoding to fail.
+                                    val cleanedData = data
+                                        .replace("\\n", "")
+                                        .replace("\\r", "")
+                                        .trim()
+
+                                    if (cleanedData.isEmpty()) continue
+
+                                    val event = json.decodeFromString<ChatEventDto>(cleanedData)
                                     when (event.type) {
                                         "token" -> {
                                             fullText += event.token ?: ""
@@ -116,7 +132,7 @@ class KtorChatRepository(
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    // Skip malformed chunks
+                                    println("KtorChatRepository: Error parsing chunk '$data': ${e.message}")
                                 }
                             }
                         }
