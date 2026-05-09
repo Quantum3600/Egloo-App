@@ -147,7 +147,7 @@ fun AdaptiveRootContent(component: RootComponent) {
                                             when (val instance = child.instance) {
                                                 is RootComponent.Child.HomeChild -> HomeScreen()
                                                 is RootComponent.Child.PingoChild -> PingoScreen()
-                                                is RootComponent.Child.EgloosChild -> SourcesScreen(
+                                                is RootComponent.Child.EgloosChild -> EgloosScreen(
                                                     onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
                                                 )
                                                 is RootComponent.Child.SavedChild -> SavedItemsScreen()
@@ -181,7 +181,7 @@ fun AdaptiveRootContent(component: RootComponent) {
                                         when (val instance = child.instance) {
                                         is RootComponent.Child.HomeChild -> HomeScreen()
                                         is RootComponent.Child.PingoChild -> PingoScreen()
-                                        is RootComponent.Child.EgloosChild -> SourcesScreen(
+                                        is RootComponent.Child.EgloosChild -> EgloosScreen(
                                             onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
                                         )
                                         is RootComponent.Child.SavedChild -> SavedItemsScreen()

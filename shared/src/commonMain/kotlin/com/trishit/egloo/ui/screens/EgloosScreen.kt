@@ -18,7 +18,8 @@ import org.koin.compose.koinInject
 fun EgloosScreen(
     topicsViewModel: TopicsViewModel = koinInject(),
     sourcesViewModel: SourcesViewModel = koinInject(),
-    brainViewModel: BrainViewModel = koinInject()
+    brainViewModel: BrainViewModel = koinInject(),
+    onNavigateToPdfUpload: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Topics", "Connections", "Sources")
@@ -67,7 +68,10 @@ fun EgloosScreen(
             when (selectedTab) {
                 0 -> TopicsScreen(topicsViewModel)
                 1 -> ConnectionsScreen(brainViewModel)
-                2 -> SourcesScreen(sourcesViewModel)
+                2 -> SourcesScreen(
+                    viewModel = sourcesViewModel,
+                    onNavigateToPdfUpload = onNavigateToPdfUpload
+                )
             }
         }
     }
