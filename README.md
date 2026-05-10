@@ -1,13 +1,12 @@
 # 🐧 Egloo — Your Second Brain, powered by **Pingo**
 
-<!--
-Tip: Replace the placeholder "cover" image below with a real screenshot/GIF.
-You can drop one into ./.artifacts and update the link.
--->
-
 <p align="center">
   <strong>Collect → Cluster → Chat.</strong><br/>
   Turn Gmail, Slack & Drive into a daily digest — and ask questions like you’re talking to your own memory.
+</p>
+
+<p align="center">
+  <a href="https://egloo-app.vercel.app/"><img alt="Live Demo" src="https://img.shields.io/badge/🚀%20Live%20Wasm%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white"/></a>
 </p>
 
 <p align="center">
@@ -28,6 +27,14 @@ You can drop one into ./.artifacts and update the link.
 <p align="center">
   <em>“Pingo stores your knowledge in an igloo.”</em>
 </p>
+
+---
+
+## 🧊 Try it now (Wasm Demo)
+
+- **Live demo (Web/Wasm)**: https://egloo-app.vercel.app/
+
+> If it looks like a penguin built it… that’s because it did.
 
 ---
 
@@ -119,6 +126,12 @@ Hot reload mode (desktop):
 ```
 
 ### Build & Run — Web
+
+If you just want to *see it*, use the live demo:
+
+- https://egloo-app.vercel.app/
+
+If you want to *run it locally*:
 
 Wasm target (faster):
 
