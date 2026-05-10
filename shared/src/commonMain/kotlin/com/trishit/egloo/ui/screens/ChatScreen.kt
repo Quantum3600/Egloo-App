@@ -20,6 +20,8 @@ import com.trishit.egloo.ui.components.*
 import org.koin.compose.koinInject
 import kotlinx.datetime.*
 import kotlin.time.Instant
+import org.jetbrains.compose.resources.painterResource
+import egloo.shared.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +92,7 @@ fun PingoScreen(
                 )
             }
             
-            if (state.isTyping) {
+            if (state.isTyping || state.isSending) {
                 item { TypingIndicator() }
             }
 
@@ -145,12 +147,27 @@ fun MessageBubble(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
-                    Text(
-                        text = message.text,
-                        color = textColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (message is ChatMessage.Pingo && message.isStreaming && message.text.isEmpty()) {
+                        Image(
+                            painter = painterResource(Res.drawable.pingo_think),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp).padding(top = 2.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "Thinking...",
+                            color = textColor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Text(
+                            text = message.text,
+                            color = textColor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     
                     if (!isUser) {
                         IconButton(onClick = onSave, modifier = Modifier.size(24.dp)) {
@@ -183,22 +200,49 @@ fun MessageBubble(
                     }
 
                     // Metadata (Integrity Check)
-                    if (!message.isStreaming && (message.modelUsed != null || message.sourcesRetrieved > 0)) {
+                    if (!message.isStreaming && message.metadata != null) {
+                        val meta = message.metadata
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            message.modelUsed?.let {
-                                Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = textColor.copy(alpha = 0.5f)
-                                )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                meta.model?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.5f)
+                                    )
+                                }
+                                meta.provider?.let {
+                                    Text(
+                                        text = "via $it",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
-                            if (message.sourcesRetrieved > 0) {
-                                Text(
-                                    text = "${message.sourcesRetrieved} sources",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = textColor.copy(alpha = 0.5f)
-                                )
+                            
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (meta.sourcesRetrieved > 0) {
+                                    Text(
+                                        text = "${meta.sourcesRetrieved} sources",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.5f)
+                                    )
+                                }
+                                meta.usage?.let {
+                                    Text(
+                                        text = "${it.totalTokens} tokens",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.5f)
+                                    )
+                                }
+                                meta.latencyMs?.let {
+                                    Text(
+                                        text = "${it}ms",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = textColor.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -287,12 +331,22 @@ fun TypingIndicator() {
         shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp),
         modifier = Modifier.padding(end = 48.dp)
     ) {
-        Text(
-            "Pingo is thinking...",
-            style = MaterialTheme.typography.bodySmall,
+        Row(
             modifier = Modifier.padding(12.dp),
-            color = MaterialTheme.colorScheme.onSecondaryContainer
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.pingo_think),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                "Pingo is thinking...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
     }
 }
 

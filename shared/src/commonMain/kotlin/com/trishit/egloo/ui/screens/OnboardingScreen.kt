@@ -9,10 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import com.trishit.egloo.ui.components.PingoAvatar
 import com.trishit.egloo.ui.theme.EglooColors
+import org.jetbrains.compose.resources.painterResource
+import egloo.shared.generated.resources.*
 
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
@@ -88,7 +90,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
 
 @Composable
 private fun OnboardingPage(
-    emoji: String,
+    painter: Painter,
     title: String,
     body: String,
     extraContent: @Composable () -> Unit = {},
@@ -101,15 +103,17 @@ private fun OnboardingPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Pingo illustration placeholder
+        // Pingo illustration
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(EglooColors.TealDarker.copy(alpha = 0.3f)),
+                .size(300.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(emoji, style = MaterialTheme.typography.displayLarge)
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(16.dp)
+            )
         }
 
         Spacer(Modifier.height(32.dp))
@@ -138,14 +142,14 @@ private fun OnboardingPage(
 
 @Composable
 private fun OnboardingWelcome() = OnboardingPage(
-    emoji = "🐧",
+    painter = painterResource(Res.drawable.pingo_egg),
     title = "Meet Pingo",
     body = "Your personal AI assistant who lives in an igloo and keeps your knowledge safe, organised, and always at hand.",
 )
 
 @Composable
 private fun OnboardingHowItWorks() = OnboardingPage(
-    emoji = "❄",
+    painter = painterResource(Res.drawable.pingo_walk),
     title = "Your igloo of knowledge",
     body = "Connect Gmail, Slack, and Drive. Pingo reads everything and stores it safely in the igloo — then answers your questions in plain English.",
     extraContent = {
@@ -160,45 +164,17 @@ private fun OnboardingHowItWorks() = OnboardingPage(
 
 @Composable
 private fun OnboardingPrivacy() = OnboardingPage(
-    emoji = "🔒",
+    painter = painterResource(Res.drawable.pingo_to_egloo),
     title = "Your data stays yours",
     body = "Everything lives in your igloo. Your data is encrypted and never used to train AI models. Pingo works for you, not for us.",
 )
 
 @Composable
-private fun OnboardingReady() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp)
-            .padding(top = 80.dp, bottom = 200.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                .clip(RoundedCornerShape(40.dp))
-                .background(EglooColors.TealDarker.copy(alpha = 0.4f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            PingoAvatar(size = 80.dp)
-        }
-        Spacer(Modifier.height(32.dp))
-        Text(
-            "Pingo is ready!",
-            style = MaterialTheme.typography.headlineLarge,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "The igloo is built. Connect your first source and let Pingo get to work.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
+private fun OnboardingReady() = OnboardingPage(
+    painter = painterResource(Res.drawable.pingo_hi),
+    title = "Pingo is ready!",
+    body = "The igloo is built. Connect your first source and let Pingo get to work.",
+)
 
 @Composable
 private fun HowItWorksStep(number: String, label: String) {

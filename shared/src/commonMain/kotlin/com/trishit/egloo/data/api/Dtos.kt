@@ -8,7 +8,22 @@ import kotlinx.serialization.Serializable
 import kotlin.time.*
 import kotlin.time.Clock
 
-// ── Auth DTOs ───────────────────────────────────────────────────────────────
+// ── Common Response Wrapper ──────────────────────────────────────────────────
+
+@Serializable
+data class EglooResponse<T>(
+    val data: T? = null,
+    val result: T? = null,
+    val content: T? = null,
+    val status: String? = null,
+    val error: String? = null
+) {
+    fun getOrNull(): T? = data ?: result ?: content
+    
+    fun getOrThrow(): T {
+        return getOrNull() ?: throw Exception(error ?: "Empty response")
+    }
+}
 
 @Serializable
 data class UserRegisterRequest(
@@ -28,6 +43,11 @@ data class TokenResponse(
     val access_token: String,
     val refresh_token: String,
     val token_type: String = "bearer"
+)
+
+@Serializable
+data class RefreshTokenRequest(
+    val refresh_token: String
 )
 
 @Serializable
@@ -66,7 +86,11 @@ data class DigestResponse(
     val sections: List<DigestSectionDto>? = emptyList(),
     val action_items: List<String>? = emptyList(),
     val topics: List<TopicResponse>? = emptyList(),
-    val created_at: String? = null
+    val created_at: String? = null,
+    val model_used: String? = null,
+    val provider: String? = null,
+    val usage: AIUsageDto? = null,
+    val latency_ms: Long? = null
 )
 
 @Serializable
@@ -107,13 +131,13 @@ data class ActionItemDto(
 
 @Serializable
 data class TopicResponse(
-    val id: String,
-    val name: String,
+    val id: String? = null,
+    val name: String? = null,
     val summary: String? = "",
-    @SerialName("sourceTypes") val source_types: List<String>? = emptyList(),
-    @SerialName("itemCount") val item_count: Int = 0,
-    @SerialName("lastRefreshedAt") val last_refreshed_at: String? = null,
-    @SerialName("createdAt") val created_at: String? = null
+    @SerialName("source_types") val source_types: List<String>? = emptyList(),
+    @SerialName("item_count") val item_count: Int = 0,
+    @SerialName("last_refreshed_at") val last_refreshed_at: String? = null,
+    @SerialName("created_at") val created_at: String? = null
 )
 
 @Serializable
@@ -163,18 +187,31 @@ data class SourceListResponse(
 // ── Brain DTOs ───────────────────────────────────────────────────────────────
 
 @Serializable
+data class AIUsageDto(
+    @SerialName("prompt_tokens") val prompt_tokens: Int? = 0,
+    @SerialName("completion_tokens") val completion_tokens: Int? = 0,
+    @SerialName("total_tokens") val total_tokens: Int? = 0
+)
+
+@Serializable
 data class BrainTodayResponse(
     val priorities: List<String> = emptyList(),
     val blocked: List<String> = emptyList(),
     val action_items: List<String> = emptyList(),
     val suggested_first_step: String = "",
-    val model_used: String? = null
+    val model_used: String? = null,
+    val provider: String? = null,
+    val usage: AIUsageDto? = null,
+    val latency_ms: Long? = null
 )
 
 @Serializable
 data class BrainMissingResponse(
     val missing: List<String> = emptyList(),
-    val model_used: String? = null
+    val model_used: String? = null,
+    val provider: String? = null,
+    val usage: AIUsageDto? = null,
+    val latency_ms: Long? = null
 )
 
 @Serializable
@@ -189,7 +226,10 @@ data class BrainConnectionDto(
 @Serializable
 data class BrainConnectionsResponse(
     val connections: List<BrainConnectionDto> = emptyList(),
-    val model_used: String? = null
+    val model_used: String? = null,
+    val provider: String? = null,
+    val usage: AIUsageDto? = null,
+    val latency_ms: Long? = null
 )
 
 @Serializable
@@ -227,13 +267,13 @@ data class IngestResponse(
 @Serializable
 data class JobStatusResponse(
     val job_id: String,
-    @SerialName("sourceId") val source_id: String,
-    @SerialName("sourceType") val source_type: String,
+    @SerialName("source_id") val source_id: String,
+    @SerialName("source_type") val source_type: String,
     val status: String,
     val progress: Int,
     val message: String,
-    @SerialName("createdAt") val created_at: String,
-    @SerialName("updatedAt") val updated_at: String,
+    @SerialName("created_at") val created_at: String,
+    @SerialName("updated_at") val updated_at: String,
     val error: String? = null
 )
 
@@ -259,7 +299,10 @@ data class ChatRequest(val query: String)
 data class AskResponse(
     val answer: String,
     val sources: List<SourceCitationDto> = emptyList(),
-    @SerialName("modelUsed") val model_used: String? = null,
+    @SerialName("model_used") val model_used: String? = null,
+    @SerialName("provider") val provider: String? = null,
+    @SerialName("usage") val usage: AIUsageDto? = null,
+    @SerialName("latency_ms") val latency_ms: Long? = null,
     @SerialName("chunksRetrieved") val chunks_retrieved: Int = 0,
     val cached: Boolean = false,
     val question: String? = null
@@ -270,9 +313,12 @@ data class QueryHistoryItem(
     val id: String,
     val question: String,
     val answer: String?,
-    @SerialName("sourcesUsed") val sources_used: List<SourceCitationDto>? = emptyList(),
-    @SerialName("modelUsed") val model_used: String? = null,
-    @SerialName("createdAt") val created_at: String
+    @SerialName("sources_used") val sources_used: List<SourceCitationDto>? = emptyList(),
+    @SerialName("model_used") val model_used: String? = null,
+    @SerialName("provider") val provider: String? = null,
+    @SerialName("usage") val usage: AIUsageDto? = null,
+    @SerialName("latency_ms") val latency_ms: Long? = null,
+    @SerialName("created_at") val created_at: String
 )
 
 @Serializable
@@ -298,7 +344,11 @@ data class ChatEventDto(
     val type: String,
     val token: String? = null,
     val sources: List<SourceCitationDto>? = null,
-    val model: String? = null
+    val model: String? = null,
+    val provider: String? = null,
+    val usage: AIUsageDto? = null,
+    @SerialName("latency_ms") val latency_ms: Long? = null,
+    @SerialName("finish_reason") val finish_reason: String? = null
 )
 
 // ── Saved Items DTOs ─────────────────────────────────────────────────────────
@@ -313,10 +363,10 @@ data class SaveItemRequest(
 data class SavedItemResponse(
     val id: String,
     val title: String,
-    val summary: String,
-    @SerialName("itemType") val item_type: String,
-    @SerialName("savedAt") val saved_at: String,
-    val metadata: Map<String, String> = emptyMap()
+    @SerialName("content") val summary: String? = null,
+    @SerialName("item_type") val item_type: String,
+    @SerialName("created_at") val saved_at: String,
+    @SerialName("item_metadata") val metadata: Map<String, String> = emptyMap()
 )
 
 @Serializable
@@ -396,7 +446,13 @@ fun DigestResponse.toDomain(): DailyDigest {
         summaryText = summary_text ?: "",
         totalItemCount = derivedTotalCount,
         sections = domainSections,
-        topics = topics?.map { it.toDomain() } ?: emptyList()
+        topics = topics?.map { it.toDomain() } ?: emptyList(),
+        metadata = AIMetadata(
+            model = model_used,
+            provider = provider,
+            usage = usage?.toDomain(),
+            latencyMs = latency_ms
+        )
     )
 }
 
@@ -425,8 +481,8 @@ fun ActionItemDto.toDomain() = ActionItem(
 )
 
 fun TopicResponse.toDomain() = Topic(
-    id = id,
-    title = name,
+    id = id ?: "",
+    title = name ?: "Untitled Topic",
     summary = summary ?: "",
     itemCount = item_count,
     sources = source_types?.map { type ->
@@ -450,12 +506,28 @@ fun BrainTodayResponse.toDomain() = BrainToday(
     blocked = blocked,
     actionItems = action_items,
     suggestedFirstStep = suggested_first_step,
-    modelUsed = model_used
+    metadata = AIMetadata(
+        model = model_used,
+        provider = provider,
+        usage = usage?.toDomain(),
+        latencyMs = latency_ms
+    )
 )
 
 fun BrainMissingResponse.toDomain() = BrainMissing(
     missing = missing,
-    modelUsed = model_used
+    metadata = AIMetadata(
+        model = model_used,
+        provider = provider,
+        usage = usage?.toDomain(),
+        latencyMs = latency_ms
+    )
+)
+
+fun AIUsageDto.toDomain() = AIUsage(
+    promptTokens = prompt_tokens ?: 0,
+    completionTokens = completion_tokens ?: 0,
+    totalTokens = total_tokens ?: 0
 )
 
 fun BrainConnectionDto.toDomain() = BrainConnection(
@@ -492,8 +564,14 @@ fun AskResponse.toDomain(id: String, sentAt: Long) = ChatMessage.Pingo(
     sentAt = sentAt,
     sources = sources.map { ChatSource(it.source_name_fallback(), it.source_type_to_domain()) },
     isStreaming = false,
-    modelUsed = model_used,
-    sourcesRetrieved = chunks_retrieved
+    metadata = AIMetadata(
+        model = model_used,
+        provider = provider,
+        usage = usage?.toDomain(),
+        latencyMs = latency_ms,
+        cached = cached,
+        sourcesRetrieved = chunks_retrieved
+    )
 )
 
 fun SourceCitationDto.source_name_fallback(): String {
@@ -507,7 +585,7 @@ fun SourceCitationDto.source_type_to_domain(): SourceType {
 fun SavedItemResponse.toDomain() = SavedItem(
     id = id,
     title = title,
-    summary = summary,
+    summary = summary ?: "",
     type = item_type,
     savedAt = saved_at,
     metadata = metadata

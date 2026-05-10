@@ -18,6 +18,9 @@ import com.trishit.egloo.domain.viewmodels.*
 import com.trishit.egloo.ui.components.*
 import com.trishit.egloo.ui.theme.EglooColors
 import org.koin.compose.koinInject
+import org.jetbrains.compose.resources.painterResource
+import egloo.shared.generated.resources.Res
+import egloo.shared.generated.resources.pingo_hi
 
 @Composable
 fun HomeScreen(
@@ -35,11 +38,12 @@ fun HomeScreen(
     val userName = settingsState.settings.userName
 
     when {
-        homeState.isLoading && homeState.digest == null -> LoadingState()
-        homeState.error != null && homeState.digest == null -> ErrorState(homeState.error!!) { homeViewModel.loadDigest() }
+        homeState.isLoading && homeState.digest == null -> LoadingAnimation("Pingo is reading your messages...")
+        homeState.error != null && homeState.digest == null -> ErrorScreen(message = homeState.error!!) { homeViewModel.loadDigest() }
         else -> HomeContent(
             userName = userName,
             digest = homeState.digest,
+            isLoading = homeState.isLoading,
             brainState = brainState,
             ingestState = ingestState,
             onItemClick = onItemClick,
@@ -53,6 +57,7 @@ fun HomeScreen(
 private fun HomeContent(
     userName: String,
     digest: DailyDigest?,
+    isLoading: Boolean,
     brainState: BrainUiState,
     ingestState: IngestUiState,
     onItemClick: (KnowledgeItem) -> Unit,
@@ -76,19 +81,34 @@ private fun HomeContent(
                     val firstName = if (userName == "User") "" else userName.split(" ").firstOrNull() ?: ""
                     val greetingBase = digest?.greeting?.replace(", User", "") ?: "Good morning"
                     
-                    Text(
-                        text = if (firstName.isNotEmpty()) "$greetingBase, $firstName ✦" else "$greetingBase ✦",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = if (firstName.isNotEmpty()) "$greetingBase, $firstName ✦" else "$greetingBase ✦",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Image(
+                            painter = painterResource(Res.drawable.pingo_hi),
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
                 
-                IconButton(onClick = onRegenerate) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "Regenerate",
-                        tint = MaterialTheme.colorScheme.primary
+                if (isLoading && digest != null) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                } else {
+                    IconButton(onClick = onRegenerate) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Regenerate",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
@@ -105,7 +125,8 @@ private fun HomeContent(
             item {
                 PriorityCard(
                     priorities = today.priorities,
-                    suggestedStep = today.suggestedFirstStep
+                    suggestedStep = today.suggestedFirstStep,
+                    metadata = today.metadata
                 )
             }
         }
@@ -135,7 +156,8 @@ private fun HomeContent(
                 item {
                     SectionHeader(
                         title = "Pending Items",
-                        subtitle = "Things that might need your attention"
+                        subtitle = "Things that might need your attention",
+                        metadata = missingData.metadata
                     )
                 }
                 items(missingData.missing) { itemText ->
@@ -161,6 +183,16 @@ private fun HomeContent(
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.weight(1f)
                     )
+                    
+                    digest.metadata?.model?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+
                     IconButton(onClick = { digest.id.let { onSaveDigest(it) } }) {
                         Icon(Icons.Default.FavoriteBorder, contentDescription = "Save Digest")
                     }
@@ -254,27 +286,10 @@ private fun StatChip(label: String, highlight: Boolean = false, modifier: Modifi
 
 @Composable
 private fun LoadingState() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "Pingo is reading your messages…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    LoadingAnimation("Pingo is reading your messages…")
 }
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Something went wrong", style = MaterialTheme.typography.titleMedium)
-            Text(message, style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onRetry) { Text("Retry") }
-        }
-    }
+    ErrorScreen(message = message, onRetry = onRetry)
 }

@@ -21,18 +21,19 @@ import org.koin.dsl.module
 val eglooModule = module {
 
     // ── Infrastructure ────────────────────────────────────────────────────────
+    val baseUrl = "https://dragging-endurable-sublet.ngrok-free.dev"
     single<Settings> { createSettings() }
 
     single { 
         createHttpClient(
-            baseUrl = "https://egloo-backend.onrender.com",
+            baseUrl = baseUrl,
             tokenProvider = { get<AuthRepository>().getToken() },
             refreshTokenProvider = { get<AuthRepository>().refreshToken() }
         )
     }
 
     // ── Repositories ──────────────────────────────────────────────────────────
-    single<AuthRepository> { KtorAuthRepository(get(), get()) }
+    single<AuthRepository> { KtorAuthRepository(get(), get(), baseUrl) }
     single<DigestRepository> { KtorDigestRepository(get()) }
     single<ChatRepository> { KtorChatRepository(get()) }
     single<TopicsRepository> { KtorTopicsRepository(get()) }

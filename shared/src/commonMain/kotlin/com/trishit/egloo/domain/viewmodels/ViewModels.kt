@@ -101,10 +101,10 @@ class ChatViewModel(
     fun sendMessage(text: String) {
         val trimmedText = text.trim()
         if (trimmedText.isBlank()) return
-        _uiState.update { it.copy(isSending = true) }
+        _uiState.update { it.copy(isSending = true, isTyping = true) }
         scope.launch {
             chatRepo.sendMessage(trimmedText, preferredModel)
-            _uiState.update { it.copy(isSending = false) }
+            _uiState.update { it.copy(isSending = false, isTyping = false) }
         }
     }
 

@@ -35,7 +35,8 @@ data class DailyDigest(
     val summaryText: String = "",
     val totalItemCount: Int,
     val sections: List<DigestSection>,
-    val topics: List<Topic> = emptyList()
+    val topics: List<Topic> = emptyList(),
+    val metadata: AIMetadata? = null
 )
 
 @Serializable
@@ -98,9 +99,39 @@ sealed class ChatMessage {
         override val sentAt: Long,
         val sources: List<ChatSource> = emptyList(),
         val isStreaming: Boolean = false,
-        val modelUsed: String? = null,
-        val sourcesRetrieved: Int = 0
+        val metadata: AIMetadata? = null
     ) : ChatMessage()
+}
+
+@Serializable
+data class AIUsage(
+    val promptTokens: Int,
+    val completionTokens: Int,
+    val totalTokens: Int
+)
+
+@Serializable
+data class AIMetadata(
+    val model: String? = null,
+    val provider: String? = null,
+    val usage: AIUsage? = null,
+    val latencyMs: Long? = null,
+    val finishReason: String? = null,
+    val cached: Boolean = false,
+    val sourcesRetrieved: Int = 0
+) {
+    fun merge(other: AIMetadata?): AIMetadata {
+        if (other == null) return this
+        return AIMetadata(
+            model = other.model ?: this.model,
+            provider = other.provider ?: this.provider,
+            usage = other.usage ?: this.usage,
+            latencyMs = other.latencyMs ?: this.latencyMs,
+            finishReason = other.finishReason ?: this.finishReason,
+            cached = other.cached || this.cached,
+            sourcesRetrieved = if (other.sourcesRetrieved > 0) other.sourcesRetrieved else this.sourcesRetrieved
+        )
+    }
 }
 
 @Serializable
@@ -154,13 +185,13 @@ data class BrainToday(
     val blocked: List<String> = emptyList(),
     val actionItems: List<String> = emptyList(),
     val suggestedFirstStep: String = "",
-    val modelUsed: String? = null
+    val metadata: AIMetadata? = null
 )
 
 @Serializable
 data class BrainMissing(
     val missing: List<String> = emptyList(),
-    val modelUsed: String? = null
+    val metadata: AIMetadata? = null
 )
 
 @Serializable

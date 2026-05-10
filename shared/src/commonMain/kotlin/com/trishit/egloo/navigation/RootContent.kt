@@ -11,14 +11,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.*
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.trishit.egloo.data.repositories.SettingsRepository
+import com.trishit.egloo.domain.viewmodels.IngestViewModel
+import com.trishit.egloo.domain.viewmodels.SettingsViewModel
 import com.trishit.egloo.ui.screens.*
 import com.trishit.egloo.ui.theme.EglooTheme
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.DrawableResource
+import egloo.shared.generated.resources.*
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
 
@@ -26,40 +32,35 @@ import org.koin.compose.koinInject
 
 private data class NavItem(
     val label: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector,
+    val iconRes: DrawableResource,
     val destination: Destination,
 )
 
-private val navItems = listOf(
+@Composable
+private fun getNavItems() = listOf(
     NavItem(
         "Home",
-        Icons.Default.Home,
-        Icons.Default.Home,
+        Res.drawable.house_chimney_solid_full,
         Destination.Home
     ),
     NavItem(
         "Pingo",
-        Icons.Default.Search, // Using Search icon for Pingo as per previous Chat icon
-        Icons.Default.Search,
+        Res.drawable.pingo_tab_icon,
         Destination.Pingo
     ),
     NavItem(
         "Egloos",
-        Icons.Default.Cloud,
-        Icons.Default.Cloud,
+        Res.drawable.egloo_tab_icon,
         Destination.Egloos
     ),
     NavItem(
         "Saved",
-        Icons.Default.Favorite,
-        Icons.Default.Favorite,
+        Res.drawable.bookmark_svgrepo_com,
         Destination.Saved
     ),
     NavItem(
         "Settings",
-        Icons.Default.Settings,
-        Icons.Default.Settings,
+        Res.drawable.gear_svgrepo_com,
         Destination.Settings
     ),
 )
@@ -77,6 +78,9 @@ fun AdaptiveRootContent(component: RootComponent) {
         val settingsRepo = koinInject<SettingsRepository>()
         val settings by settingsRepo.getSettings().collectAsState(initial = null)
         val isDarkTheme = settings?.darkTheme ?: isSystemInDarkTheme()
+        
+        val ingestViewModel = koinInject<IngestViewModel>()
+        val ingestState by ingestViewModel.uiState.collectAsState()
 
         EglooTheme(darkTheme = isDarkTheme) {
             val stack by component.stack.subscribeAsState()
@@ -88,63 +92,108 @@ fun AdaptiveRootContent(component: RootComponent) {
                                         activeChild is RootComponent.Child.LoginChild || 
                                         activeChild is RootComponent.Child.SignUpChild
 
-                if (isAuthOrOnboarding) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        when (activeChild) {
-                            is RootComponent.Child.OnboardingChild -> {
-                                OnboardingScreen(
-                                    onComplete = { component.navigateTo(Destination.Login) }
-                                )
-                            }
-                            is RootComponent.Child.LoginChild -> {
-                                LoginScreen(
-                                    onLoginSuccess = { component.navigateTo(Destination.Home) },
-                                    onNavigateToSignUp = { component.navigateTo(Destination.SignUp) }
-                                )
-                            }
-                            is RootComponent.Child.SignUpChild -> {
-                                SignUpScreen(
-                                    onSignUpSuccess = { component.navigateTo(Destination.Login) },
-                                    onNavigateToLogin = { component.navigateTo(Destination.Login) }
-                                )
-                            }
-                            else -> {}
-                        }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Global Ingest Progress Bar
+                    if (ingestState.activeJobs.isNotEmpty() && !isAuthOrOnboarding) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(2.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        )
                     }
-                } else {
-                    if (isDesktopLayout) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                EglooNavRail(
-                                    activeDestination = activeChild.toDestination(),
-                                    onNavigate = component::navigateTo,
-                                )
 
-                                VerticalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                    modifier = Modifier.fillMaxHeight(),
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (isAuthOrOnboarding) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background,
+                            ) {
+                                when (activeChild) {
+                                    is RootComponent.Child.OnboardingChild -> {
+                                        OnboardingScreen(
+                                            onComplete = { component.navigateTo(Destination.Login) }
+                                        )
+                                    }
+                                    is RootComponent.Child.LoginChild -> {
+                                        LoginScreen(
+                                            onLoginSuccess = { component.navigateTo(Destination.Home) },
+                                            onNavigateToSignUp = { component.navigateTo(Destination.SignUp) }
+                                        )
+                                    }
+                                    is RootComponent.Child.SignUpChild -> {
+                                        SignUpScreen(
+                                            onSignUpSuccess = { component.navigateTo(Destination.Login) },
+                                            onNavigateToLogin = { component.navigateTo(Destination.Login) }
+                                        )
+                                    }
+                                    else -> {}
+                                }
+                            }
+                        } else {
+                            if (isDesktopLayout) {
+                                Surface(
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = MaterialTheme.colorScheme.background,
                                 ) {
-                                    Children(
-                                        stack = stack,
-                                        animation = stackAnimation(fade()),
-                                    ) { child ->
-                                        Surface(
-                                            modifier = Modifier.fillMaxSize(),
-                                            color = MaterialTheme.colorScheme.background
+                                    Row(modifier = Modifier.fillMaxSize()) {
+                                        EglooNavRail(
+                                            activeDestination = activeChild.toDestination(),
+                                            onNavigate = component::navigateTo,
+                                        )
+
+                                        VerticalDivider(
+                                            color = MaterialTheme.colorScheme.outlineVariant,
+                                            modifier = Modifier.fillMaxHeight(),
+                                        )
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         ) {
-                                            when (val instance = child.instance) {
+                                            Children(
+                                                stack = stack,
+                                                animation = stackAnimation(fade()),
+                                            ) { child ->
+                                                Surface(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    color = MaterialTheme.colorScheme.background
+                                                ) {
+                                                    when (val instance = child.instance) {
+                                                        is RootComponent.Child.HomeChild -> HomeScreen()
+                                                        is RootComponent.Child.PingoChild -> PingoScreen()
+                                                        is RootComponent.Child.EgloosChild -> EgloosScreen(
+                                                            onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
+                                                        )
+                                                        is RootComponent.Child.SavedChild -> SavedItemsScreen()
+                                                        is RootComponent.Child.PdfUploadChild -> PdfScreen(onBack = { component.onBackPressed() })
+                                                        is RootComponent.Child.SettingsChild -> SettingsScreen(
+                                                            onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
+                                                        )
+                                                        else -> {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Main app shell for mobile
+                                Scaffold(
+                                    bottomBar = {
+                                        EglooBottomBar(
+                                            activeDestination = activeChild.toDestination(),
+                                            onNavigate = component::navigateTo,
+                                        )
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                ) { innerPadding ->
+                                    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                                        Children(
+                                            stack = stack,
+                                            animation = stackAnimation(fade() + scale()),
+                                        ) { child ->
+                                                when (val instance = child.instance) {
                                                 is RootComponent.Child.HomeChild -> HomeScreen()
                                                 is RootComponent.Child.PingoChild -> PingoScreen()
                                                 is RootComponent.Child.EgloosChild -> EgloosScreen(
@@ -158,38 +207,6 @@ fun AdaptiveRootContent(component: RootComponent) {
                                                 else -> {}
                                             }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Main app shell for mobile
-                        Scaffold(
-                            bottomBar = {
-                                EglooBottomBar(
-                                    activeDestination = activeChild.toDestination(),
-                                    onNavigate = component::navigateTo,
-                                )
-                            },
-                            containerColor = MaterialTheme.colorScheme.background,
-                        ) { innerPadding ->
-                            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                                Children(
-                                    stack = stack,
-                                    animation = stackAnimation(fade() + scale()),
-                                ) { child ->
-                                        when (val instance = child.instance) {
-                                        is RootComponent.Child.HomeChild -> HomeScreen()
-                                        is RootComponent.Child.PingoChild -> PingoScreen()
-                                        is RootComponent.Child.EgloosChild -> EgloosScreen(
-                                            onNavigateToPdfUpload = { component.navigateTo(Destination.PdfUpload) }
-                                        )
-                                        is RootComponent.Child.SavedChild -> SavedItemsScreen()
-                                        is RootComponent.Child.PdfUploadChild -> PdfScreen(onBack = { component.onBackPressed() })
-                                        is RootComponent.Child.SettingsChild -> SettingsScreen(
-                                            onRestartOnboarding = { component.navigateTo(Destination.Onboarding) }
-                                        )
-                                        else -> {}
                                     }
                                 }
                             }
@@ -212,15 +229,16 @@ private fun EglooBottomBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
     ) {
-        navItems.forEach { item ->
+        getNavItems().forEach { item ->
             val isSelected = activeDestination == item.destination
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onNavigate(item.destination) },
                 icon = {
                     Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.icon,
+                        painter = painterResource(item.iconRes),
                         contentDescription = item.label,
+                        modifier = Modifier.size(24.dp)
                     )
                 },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
@@ -257,12 +275,18 @@ fun EglooNavRail(
         }
     ) {
         Spacer(Modifier.weight(1f))
-        navItems.forEach { item ->
+        getNavItems().forEach { item ->
             val isSelected = activeDestination == item.destination
             NavigationRailItem(
                 selected = isSelected,
                 onClick = { onNavigate(item.destination) },
-                icon = { Icon(item.icon, contentDescription = item.label) },
+                icon = {
+                    Icon(
+                        painter = painterResource(item.iconRes),
+                        contentDescription = item.label,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                 colors = NavigationRailItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,

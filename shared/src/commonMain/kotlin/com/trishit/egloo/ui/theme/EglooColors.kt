@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 
 object EglooColors {
 
-    // Primary — Pingo Teal
+    // Primary — Pingo Teal (Keep for backward compatibility or transition)
     val TealPrimary     = Color(0xFF1D9E75)
     val TealDark        = Color(0xFF0F6E56)
     val TealDarker      = Color(0xFF085041)
@@ -22,22 +22,44 @@ object EglooColors {
     val BlueLighter     = Color(0xFFB5D4F4)
     val BlueSurface     = Color(0xFFE6F1FB)
 
-    // Night background
+    // Night background (Classic)
     val NightDeep       = Color(0xFF0E1A2E)
     val NightMid        = Color(0xFF162336)
     val NightSurface    = Color(0xFF1E2F42)
     val NightCard       = Color(0xFF243548)
 
-    // Snow (light theme surfaces)
+    // Snow background (Classic)
     val SnowWhite       = Color(0xFFDAF0FA)
-    val SnowPure        = Color(0xFFF0F8FF)
     val SnowLight       = Color(0xFFCCE8F4)
     val SnowMid         = Color(0xFFAAD4E8)
 
-    // Beak Amber (CTA / accent)
-    val BeakAmber       = Color(0xFFF5A623)
+    // Design System Updates
+    
+    // Accent/Brand — Pingo's Beak
+    val BeakAmber       = Color(0xFFFF8C00)
+    val BeakAmberDark   = Color(0xFFFF9F29)
     val BeakDark        = Color(0xFFBA7517)
     val BeakSurface     = Color(0xFFFAEEDA)
+
+    // Secondary Accent
+    val MidnightBlue    = Color(0xFF1F2937)
+    val IceBlue         = Color(0xFF38BDF8)
+
+    // Backgrounds
+    val SnowDay         = Color(0xFFF4F7FB)
+    val MidnightVoid    = Color(0xFF0D1117)
+    
+    // Surfaces
+    val SnowPure        = Color(0xFFFFFFFF)
+    val MidnightSurface = Color(0xFF161C24)
+    val SnowGlass       = Color(0xFFEAF0F6)
+    val MidnightGlass   = Color(0xFF1E293B)
+
+    // Text
+    val NavyPrimary     = Color(0xFF1A2332)
+    val SilverCrisp     = Color(0xFFE2E8F0)
+    val FrostyGray      = Color(0xFF5C6D85)
+    val MutedFrost      = Color(0xFF94A3B8)
 
     // Semantic
     val Success         = TealPrimary

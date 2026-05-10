@@ -15,11 +15,19 @@ class KtorAvailableSourcesRepository(private val client: HttpClient) : Available
         try {
             val response = client.get("/api/v1/sources/available")
             if (response.status.value == 200) {
-                // API returns list directly or wrapped in AvailableSourceListResponse
                 val sources = try {
-                    response.body<List<AvailableSourceDto>>()
+                    val wrapped = response.body<com.trishit.egloo.data.api.EglooResponse<List<AvailableSourceDto>>>()
+                    wrapped.getOrNull() ?: try {
+                        response.body<List<AvailableSourceDto>>()
+                    } catch (_: Exception) {
+                        response.body<AvailableSourceListResponse>().sources
+                    }
                 } catch (e: Exception) {
-                    response.body<AvailableSourceListResponse>().sources
+                    try {
+                        response.body<List<AvailableSourceDto>>()
+                    } catch (_: Exception) {
+                        response.body<AvailableSourceListResponse>().sources
+                    }
                 }
                 emit(sources.map { it.toDomain() })
             } else {

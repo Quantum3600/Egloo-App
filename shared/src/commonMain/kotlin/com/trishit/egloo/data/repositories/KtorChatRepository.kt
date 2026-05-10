@@ -23,10 +23,18 @@ class KtorChatRepository(
         try {
             val response = client.get("/api/v1/query/history")
             if (response.status.isSuccess()) {
-                val historyResponse = response.body<QueryHistoryResponse>()
+                // Try to parse as wrapped EglooResponse first, fallback to direct object
+                val historyItems = try {
+                    val wrapped = response.body<EglooResponse<QueryHistoryResponse>>()
+                    wrapped.getOrNull()?.history ?: response.body<QueryHistoryResponse>().history
+                } catch (e: Exception) {
+                    println("Ktor: Direct parse fallback for history: ${e.message}")
+                    response.body<QueryHistoryResponse>().history
+                }
+
                 val domainMessages = mutableListOf<ChatMessage>()
                 
-                historyResponse.history.forEach { item ->
+                historyItems.forEach { item ->
                     val userMsg = ChatMessage.User(
                         id = "u_${item.id}",
                         text = item.question,
@@ -42,7 +50,12 @@ class KtorChatRepository(
                             sources = item.sources_used?.map { 
                                 ChatSource(it.source_name_fallback(), it.source_type_to_domain())
                             } ?: emptyList(),
-                            modelUsed = item.model_used
+                            metadata = AIMetadata(
+                                model = item.model_used,
+                                provider = item.provider,
+                                usage = item.usage?.toDomain(),
+                                latencyMs = item.latency_ms
+                            )
                         )
                         domainMessages.add(pingoMsg)
                     }
@@ -50,7 +63,7 @@ class KtorChatRepository(
                 _messages.value = domainMessages
             }
         } catch (e: Exception) {
-            // Log error
+            println("Ktor Error loading history: ${e.message}")
         }
     }
 
@@ -90,23 +103,20 @@ class KtorChatRepository(
                             val line = channel.readUTF8Line() ?: break
                             if (line.isBlank()) continue
                             
-                            // The server might send multiple "data: ..." events in a single line
-                            // or bundled in one read. Split by "data:" and process each.
-                            val dataParts = line.split("data:")
-                                .map { it.trim() }
-                                .filter { it.isNotEmpty() }
-                            
-                            for (data in dataParts) {
-                                if (data == "[DONE]") break
+                            println("Ktor Raw: $line")
+
+                            // SSE spec says lines starting with "data: " contain the payload
+                            if (line.startsWith("data:")) {
+                                val data = line.removePrefix("data:").trim()
+                                
+                                if (data == "[DONE]") {
+                                    println("Ktor: Stream [DONE]")
+                                    break
+                                }
                                 
                                 try {
-                                    // Strip literal \n and \r character sequences that might be trailing
-                                    // or embedded in the SSE data string, which cause JSON decoding to fail.
-                                    val cleanedData = data
-                                        .replace("\\n", "")
-                                        .replace("\\r", "")
-                                        .trim()
-
+                                    // Robust parsing: Only trim, don't strip internal \n
+                                    val cleanedData = data.trim()
                                     if (cleanedData.isEmpty()) continue
 
                                     val event = json.decodeFromString<ChatEventDto>(cleanedData)
@@ -124,15 +134,37 @@ class KtorChatRepository(
                                                 fullText, 
                                                 isStreaming = true, 
                                                 sources = sources,
-                                                modelUsed = event.model
+                                                metadata = AIMetadata(
+                                                    model = event.model,
+                                                    provider = event.provider,
+                                                    usage = event.usage?.toDomain(),
+                                                    latencyMs = event.latency_ms
+                                                )
                                             )
                                         }
                                         "done" -> {
-                                            updatePingoMessage(pingoId, fullText, isStreaming = false, modelUsed = event.model)
+                                            updatePingoMessage(
+                                                pingoId, 
+                                                fullText, 
+                                                isStreaming = false, 
+                                                metadata = AIMetadata(
+                                                    model = event.model,
+                                                    provider = event.provider,
+                                                    usage = event.usage?.toDomain(),
+                                                    latencyMs = event.latency_ms,
+                                                    finishReason = event.finish_reason
+                                                )
+                                            )
+                                        }
+                                        "error" -> {
+                                            val errorMessage = event.token ?: "Unknown error"
+                                            updatePingoMessage(pingoId, "Error: $errorMessage", isStreaming = false)
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    println("KtorChatRepository: Error parsing chunk '$data': ${e.message}")
+                                    println("Ktor Error parsing chunk: ${e.message}")
+                                    // Fallback: If it's a raw token string not in JSON, we could try to append it
+                                    // but standardizing on JSON is better.
                                 }
                             }
                         }
@@ -157,18 +189,18 @@ class KtorChatRepository(
         text: String, 
         isStreaming: Boolean, 
         sources: List<ChatSource>? = null,
-        modelUsed: String? = null
+        metadata: AIMetadata? = null
     ) {
         _messages.update { msgs ->
-            msgs.map { 
-                if (it.id == id && it is ChatMessage.Pingo) {
-                    it.copy(
+            msgs.map { msg ->
+                if (msg.id == id && msg is ChatMessage.Pingo) {
+                    msg.copy(
                         text = text,
                         isStreaming = isStreaming,
-                        sources = sources ?: it.sources,
-                        modelUsed = modelUsed ?: it.modelUsed
+                        sources = sources ?: msg.sources,
+                        metadata = msg.metadata?.merge(metadata) ?: metadata
                     )
-                } else it
+                } else msg
             }
         }
     }

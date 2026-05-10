@@ -42,10 +42,8 @@ fun TopicsScreen(viewModel: TopicsViewModel = koinInject()) {
             )
         }
 
-        if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+        if (state.isLoading || state.isGenerating) {
+            LoadingAnimation(if (state.isGenerating) "Clustering your knowledge..." else "Pingo is thinking...")
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 160.dp),
@@ -165,9 +163,7 @@ fun ConnectionsScreen(viewModel: BrainViewModel = koinInject()) {
         }
 
         if (state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            LoadingAnimation("Pingo is analyzing connections...")
         } else if (state.connections.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No cross-source connections found yet.", style = MaterialTheme.typography.bodyLarge)
@@ -706,7 +702,7 @@ fun SavedItemsScreen(
 
         if (state.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingAnimation("Pingo is fetching your saved items...")
             }
         } else if (state.items.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

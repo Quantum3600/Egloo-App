@@ -1,10 +1,12 @@
 package com.trishit.egloo.ui.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -12,11 +14,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import com.trishit.egloo.data.repositories.HealthStatus
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.ui.theme.EglooColors
+import org.jetbrains.compose.resources.painterResource
+import egloo.shared.generated.resources.*
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -207,14 +212,27 @@ fun ActionItemRow(action: ActionItem, modifier: Modifier = Modifier) {
 fun SectionHeader(
     title: String,
     subtitle: String? = null,
+    metadata: AIMetadata? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            
+            metadata?.model?.let {
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+        }
         if (subtitle != null) {
             Text(
                 text = subtitle,
@@ -261,6 +279,7 @@ fun PingoMessageBubble(message: String, modifier: Modifier = Modifier) {
 fun PriorityCard(
     priorities: List<String>,
     suggestedStep: String,
+    metadata: AIMetadata? = null,
     onStepClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -283,6 +302,15 @@ fun PriorityCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+                
+                metadata?.model?.let {
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                    )
+                }
             }
             
             Spacer(Modifier.height(12.dp))
@@ -446,6 +474,88 @@ fun CeleryHealthIndicator(status: HealthStatus?, modifier: Modifier = Modifier) 
                     style = MaterialTheme.typography.labelSmall,
                     color = color.copy(alpha = 0.7f)
                 )
+            }
+        }
+    }
+}
+
+// ── Loading animation (Floating Pingo) ──────────────────────────────────────────
+
+@Composable
+fun LoadingAnimation(message: String = "Pingo is thinking...") {
+    val infiniteTransition = rememberInfiniteTransition()
+    val dy by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(Res.drawable.pingo_med),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(100.dp)
+                    .offset(y = dy.dp)
+            )
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+// ── Error screen ──────────────────────────────────────────────────────────────
+
+@Composable
+fun ErrorScreen(
+    title: String = "Oops! The Igloo is a bit chilly.",
+    message: String,
+    onRetry: () -> Unit
+) {
+    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(Res.drawable.pingo_error),
+                contentDescription = null,
+                modifier = Modifier.size(140.dp)
+            )
+            Spacer(Modifier.height(32.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(32.dp))
+            Button(
+                onClick = onRetry,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) {
+                Icon(Icons.Default.Refresh, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Try Again")
             }
         }
     }

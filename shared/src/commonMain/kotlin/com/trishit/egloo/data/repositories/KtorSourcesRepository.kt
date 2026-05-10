@@ -19,11 +19,19 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
         try {
             val response = client.get("/api/v1/sources")
             if (response.status.value == 200) {
-                // API returns list directly or wrapped in SourceListResponse
                 val sources = try {
-                    response.body<List<SourceResponse>>()
-                } catch (_: Exception) {
-                    response.body<SourceListResponse>().sources
+                    val wrapped = response.body<com.trishit.egloo.data.api.EglooResponse<List<SourceResponse>>>()
+                    wrapped.getOrNull() ?: try {
+                        response.body<List<SourceResponse>>()
+                    } catch (_: Exception) {
+                        response.body<SourceListResponse>().sources
+                    }
+                } catch (e: Exception) {
+                    try {
+                        response.body<List<SourceResponse>>()
+                    } catch (_: Exception) {
+                        response.body<SourceListResponse>().sources
+                    }
                 }
                 emit(sources.map { it.toDomain() })
             } else {

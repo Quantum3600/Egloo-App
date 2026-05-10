@@ -8,6 +8,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.*
@@ -26,7 +27,8 @@ interface AuthRepository {
 
 class KtorAuthRepository(
     private val client: HttpClient,
-    private val settings: Settings
+    private val settings: Settings,
+    private val baseUrl: String
 ) : AuthRepository {
 
     private val _isAuthenticated = MutableStateFlow(getToken() != null)
@@ -40,8 +42,16 @@ class KtorAuthRepository(
                 isLenient = true
             })
         }
+        install(Logging) {
+            level = LogLevel.ALL
+            logger = object : Logger {
+                override fun log(message: String) {
+                    println("Ktor-Auth: $message")
+                }
+            }
+        }
         defaultRequest {
-            url("https://egloo-backend.onrender.com")
+            url(baseUrl)
         }
     }
 
@@ -104,11 +114,7 @@ class KtorAuthRepository(
         return try {
             val response = authClient.post("/api/v1/auth/refresh") {
                 contentType(ContentType.Application.Json)
-                // Sending refresh token in header or body as per backend requirement
-                // Based on common patterns and API_REFERENCE hints, let's try body if not specified
-                // Or if it's a bearer token flow for refresh too? 
-                // Usually it's a POST with the refresh token.
-                header(HttpHeaders.Authorization, "Bearer $refreshToken")
+                setBody(RefreshTokenRequest(refreshToken))
             }
             
             if (response.status.isSuccess()) {

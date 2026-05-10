@@ -17,8 +17,13 @@ class KtorDigestRepository(private val client: HttpClient) : DigestRepository {
         try {
             val response = client.get("/api/v1/digest/today")
             if (response.status.value == 200) {
-                val dto = response.body<DigestResponse>()
-                emit(DigestResult.Success(dto.toDomain()))
+                val digest = try {
+                    val wrapped = response.body<com.trishit.egloo.data.api.EglooResponse<DigestResponse>>()
+                    wrapped.getOrNull() ?: response.body<DigestResponse>()
+                } catch (e: Exception) {
+                    response.body<DigestResponse>()
+                }
+                emit(DigestResult.Success(digest.toDomain()))
             } else {
                 emit(DigestResult.Error("Failed to load digest: ${response.status}"))
             }
