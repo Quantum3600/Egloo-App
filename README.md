@@ -1,120 +1,199 @@
-# Kotlin Multiplatform Wizard Template
- 
-This repository contains Kotlin Multiplatform template projects updated to AGP 9 and using the new multiplatform
-project structure we'll be introducing soon.
+# 🐧 Egloo — Your Second Brain, powered by **Pingo**
 
-## Why this exists 
+<!--
+Tip: Replace the placeholder "cover" image below with a real screenshot/GIF.
+You can drop one into ./.artifacts and update the link.
+-->
 
-This is provided to address the delay in AGP 9 support for IntelliJ IDEA. While that work is ongoing, you can use these
-updated starter templates in Android Studio.
+<p align="center">
+  <strong>Collect → Cluster → Chat.</strong><br/>
+  Turn Gmail, Slack & Drive into a daily digest — and ask questions like you’re talking to your own memory.
+</p>
 
-The KMP wizard on [https://kmp.new](https://kmp.new) and in the IDEs will continue to generate projects with AGP 8 and
-the old structure for now. This way, those projects will continue in both IntelliJ IDEA and Android Studio.
+<p align="center">
+  <a href="https://github.com/Quantum3600/Egloo-App/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Quantum3600/Egloo-App?style=for-the-badge"/></a>
+  <a href="https://github.com/Quantum3600/Egloo-App/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/Quantum3600/Egloo-App?style=for-the-badge"/></a>
+  <a href="https://github.com/Quantum3600/Egloo-App/issues"><img alt="Issues" src="https://img.shields.io/github/issues/Quantum3600/Egloo-App?style=for-the-badge"/></a>
+  <a href="https://github.com/Quantum3600/Egloo-App/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/Quantum3600/Egloo-App?style=for-the-badge"/></a>
+</p>
 
-Once IntelliJ IDEA support for AGP 9 is shipped, we'll update the KMP wizard everywhere. 
+<p align="center">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white"/>
+  <img alt="Compose Multiplatform" src="https://img.shields.io/badge/Compose%20Multiplatform-1.7.3-4285F4?logo=jetbrains&logoColor=white"/>
+  <img alt="KMP" src="https://img.shields.io/badge/Kotlin%20Multiplatform-Android%20%7C%20iOS%20%7C%20Desktop%20%7C%20Web-000000"/>
+  <img alt="Navigation" src="https://img.shields.io/badge/Navigation-Decompose-00BFA5"/>
+  <img alt="DI" src="https://img.shields.io/badge/DI-Koin-FF5E00"/>
+</p>
 
-## How to use
-
-Use this repository as a template for your own project. It contains branches with the following configurations:
-
-| Branch Name                                                                            | Project Configuration                              |
-|----------------------------------------------------------------------------------------|----------------------------------------------------|
-| [mobile-shared](https://github.com/Kotlin/kmp-wizard/tree/mobile-shared)               | Android + iOS (CMP)                                |
-| [mobile-native](https://github.com/Kotlin/kmp-wizard/tree/mobile-native)               | Android + iOS (SwiftUI)                            |
-| [all-frontends-shared](https://github.com/Kotlin/kmp-wizard/tree/all-frontends-shared) | Android + iOS (CMP) + Desktop + Web (CMP)          |
-| [all-frontends-native](https://github.com/Kotlin/kmp-wizard/tree/all-frontends-native) | Android + iOS (SwiftUI) + Desktop + Web (React)    |
-| [all-targets](https://github.com/Kotlin/kmp-wizard/tree/all-targets)                   | Android + iOS (CMP) + Desktop + Web (CMP) + Server |
-
-After using the template, you probably want to change the project name and package name,
-since this repository contains the default values from the standard project generator.
-Search for `org.example.project` and `KotlinProject` to reconfigure this manually if you need custom values.
-
-## Project description
-
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM).
-
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
-
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
-
-### Build and Run Android Application
-
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :androidApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :androidApp:assembleDebug
-  ```
-
-### Build and Run Desktop (JVM) Application
-
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :desktopApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :desktopApp:run
-  ```
-
-To launch the desktop app in 'hot reload mode', use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :desktopApp:hotRun --auto
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :desktopApp:hotRun --auto
-  ```
-
-### Build and Run Web Application
-
-To build and run the development version of the web app, use the run configuration from the run widget
-in your IDE's toolbar or run it directly from the terminal:
-- for the Wasm target (faster, modern browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :webApp:wasmJsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :webApp:wasmJsBrowserDevelopmentRun
-    ```
-- for the JS target (slower, supports older browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :webApp:jsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :webApp:jsBrowserDevelopmentRun
-    ```
-
-### Build and Run iOS Application
-
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+<p align="center">
+  <em>“Pingo stores your knowledge in an igloo.”</em>
+</p>
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+## ✨ What is Egloo?
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+**Egloo** is a Kotlin Multiplatform personal knowledge management app (a.k.a. a “second brain”) that:
+
+- **Ingests** your work + life signals (Gmail, Slack, Google Drive)
+- **Clusters** information into topics (LLM-powered concept)
+- **Summarizes** into a daily digest
+- Lets you **chat with Pingo** to ask questions and surface context
+
+> Current stage: **prototype with dummy data** — UI, navigation, theming, and app structure are in place; backend wiring is next.
+
+---
+
+## 🧊 The “Igloo Loop” (how it’s meant to work)
+
+1. **Connect sources** (Gmail / Slack / Drive)
+2. **Ingest & index** (background jobs)
+3. **Cluster** items into topics
+4. **Digest** what matters today
+5. **Ask Pingo** anything — with source citations
+
+---
+
+## 🧭 Targets (One codebase, four frontends)
+
+Egloo runs on:
+
+- **Android** (minSdk 26, targetSdk 35)
+- **iOS** (iOS 15+)
+- **Desktop** (Windows/macOS/Linux via JVM)
+- **Web** (Kotlin/Wasm — modern browsers with WasmGC)
+
+Shared-first philosophy: most UI + logic lives in `:shared`.
+
+---
+
+## 🧩 Tech Stack
+
+- **Kotlin 2.1.0**
+- **Compose Multiplatform 1.7.3**
+- **AGP 9.0.0-rc01**
+- **Decompose 3.2.0** (navigation)
+- **Koin 4.0.0** (dependency injection)
+- **Ktor 3.0.3** (HTTP client, planned for backend integration)
+
+---
+
+## 🗺️ Project Structure
+
+```text
+androidApp/   → Android entry point
+iosApp/       → Xcode project (links shared framework)
+desktopApp/   → Desktop entry point
+webApp/       → Web entry point (Kotlin/Wasm)
+shared/       → The app (UI, state, domain, data)
+```
+
+If you want the **full architectural tour**, see **AGENTS.md**.
+
+---
+
+## 🚀 Getting Started
+
+### Requirements
+
+- Android Studio (recommended for KMP)
+- JDK 17+ (typical for modern Android/Gradle)
+- Xcode (for iOS)
+
+### Build & Run — Android
+
+```bash
+./gradlew :androidApp:assembleDebug
+```
+
+### Build & Run — Desktop (JVM)
+
+```bash
+./gradlew :desktopApp:run
+```
+
+Hot reload mode (desktop):
+
+```bash
+./gradlew :desktopApp:hotRun --auto
+```
+
+### Build & Run — Web
+
+Wasm target (faster):
+
+```bash
+./gradlew :webApp:wasmJsBrowserDevelopmentRun
+```
+
+JS target (more compatible, slower):
+
+```bash
+./gradlew :webApp:jsBrowserDevelopmentRun
+```
+
+### Run — iOS
+
+Open `iosApp/` in Xcode and run.
+
+---
+
+## 🖥️ What’s already built (prototype checklist)
+
+- ✅ Navigation across Android / iOS / Desktop / Web
+- ✅ Onboarding flow (4 pages)
+- ✅ Home “Daily Digest” screen
+- ✅ Chat screen (Pingo bubbles + streaming simulation)
+- ✅ Topics grid + topic detail sheet
+- ✅ Sources connect/disconnect simulation
+- ✅ Settings (theme toggle, sync frequency UI)
+- ✅ Dark/light theme (dark default)
+
+---
+
+## 🧠 Backend & API (planned / in progress)
+
+This repo includes an OpenAPI spec: **API_DOCS.json**.
+
+Highlights:
+
+- Auth: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`
+- Sources: connect/disconnect (Gmail, Slack, Drive)
+- Ingest: trigger ingest jobs + upload PDF
+- Query: `POST /api/v1/query/ask` + `POST /api/v1/query/ask/stream` (SSE streaming)
+
+> If you’re working on the integration, check `shared/src/commonMain/.../data/api/ApiGuidelines.kt` (referenced in AGENTS.md).
+
+---
+
+## 🎨 Design & Mascot
+
+- **Mascot**: *Pingo the Penguin* 🐧
+- **Vibe**: cold storage, warm answers
+- **Brand palette**: teal + arctic blues + “beak amber” accents
+
+If you add screenshots, consider dropping them into `.artifacts/` and showing a simple gallery here.
+
+---
+
+## 🧰 Contributing
+
+Ideas and PRs are welcome.
+
+A nice starting flow:
+
+1. Pick an issue (or create one)
+2. Skim **AGENTS.md** for architecture + conventions
+3. Keep changes shared-first when possible (`shared/commonMain`)
+
+---
+
+## 🧊 The Pingo Promise (tiny project motto)
+
+> **Your knowledge should feel searchable, calm, and yours.**
+
+---
+
+## 📄 License
+
+See [LICENSE](./LICENSE).
