@@ -36,6 +36,7 @@ data class DailyDigest(
     val totalItemCount: Int,
     val sections: List<DigestSection>,
     val topics: List<Topic> = emptyList(),
+    val actionItems: List<ActionItem> = emptyList(),
     val metadata: AIMetadata? = null
 )
 

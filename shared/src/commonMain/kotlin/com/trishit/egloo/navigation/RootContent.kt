@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.*
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.trishit.egloo.data.repositories.AuthRepository
 import com.trishit.egloo.data.repositories.SettingsRepository
 import com.trishit.egloo.domain.viewmodels.IngestViewModel
 import com.trishit.egloo.domain.viewmodels.SettingsViewModel
@@ -75,6 +76,9 @@ fun RootContent(component: RootComponent) {
 @Composable
 fun AdaptiveRootContent(component: RootComponent) {
     KoinContext {
+        val authRepo = koinInject<AuthRepository>()
+        val isLoggedIn by authRepo.isAuthenticated.collectAsState()
+        
         val settingsRepo = koinInject<SettingsRepository>()
         val settings by settingsRepo.getSettings().collectAsState(initial = null)
         val isDarkTheme = settings?.darkTheme ?: isSystemInDarkTheme()
@@ -82,10 +86,19 @@ fun AdaptiveRootContent(component: RootComponent) {
         val ingestViewModel = koinInject<IngestViewModel>()
         val ingestState by ingestViewModel.uiState.collectAsState()
 
-        EglooTheme(darkTheme = isDarkTheme) {
-            val stack by component.stack.subscribeAsState()
-            val activeChild = stack.active.instance
+        val stack by component.stack.subscribeAsState()
+        val activeChild = stack.active.instance
+        
+        // Auto-redirect to login if session expires
+        LaunchedEffect(isLoggedIn) {
+            val currentDestination = component.stack.value.active.instance.toDestination()
+            if (!isLoggedIn && currentDestination != Destination.Login && 
+                currentDestination != Destination.SignUp && currentDestination != Destination.Onboarding) {
+                component.navigateTo(Destination.Login)
+            }
+        }
 
+        EglooTheme(darkTheme = isDarkTheme) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val isDesktopLayout = maxWidth >= 600.dp
                 val isAuthOrOnboarding = activeChild is RootComponent.Child.OnboardingChild || 
@@ -303,10 +316,13 @@ fun EglooNavRail(
 
 private fun RootComponent.Child.toDestination(): Destination? =
     when (this) {
+        is RootComponent.Child.OnboardingChild -> Destination.Onboarding
+        is RootComponent.Child.LoginChild -> Destination.Login
+        is RootComponent.Child.SignUpChild -> Destination.SignUp
         is RootComponent.Child.HomeChild -> Destination.Home
         is RootComponent.Child.PingoChild -> Destination.Pingo
         is RootComponent.Child.EgloosChild -> Destination.Egloos
         is RootComponent.Child.SavedChild -> Destination.Saved
         is RootComponent.Child.SettingsChild -> Destination.Settings
-        else -> null
+        is RootComponent.Child.PdfUploadChild -> Destination.PdfUpload
     }

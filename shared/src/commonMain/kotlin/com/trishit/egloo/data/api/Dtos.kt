@@ -84,13 +84,21 @@ data class DigestResponse(
     val summary_text: String? = null,
     val total_item_count: Int? = null,
     val sections: List<DigestSectionDto>? = emptyList(),
-    val action_items: List<String>? = emptyList(),
+    val action_items: List<DigestActionItemDto>? = emptyList(),
     val topics: List<TopicResponse>? = emptyList(),
     val created_at: String? = null,
     val model_used: String? = null,
     val provider: String? = null,
     val usage: AIUsageDto? = null,
     val latency_ms: Long? = null
+)
+
+@Serializable
+data class DigestActionItemDto(
+    val task: String? = null,
+    val text: String? = null,
+    val status: String? = null,
+    val completed: Boolean? = null
 )
 
 @Serializable
@@ -127,7 +135,11 @@ data class ActionItemDto(
     val is_completed: Boolean = false
 )
 
-// ── Topics DTOs ──────────────────────────────────────────────────────────────
+@Serializable
+data class RefreshTopicsRequest(
+    val strategy: String = "auto",
+    val max_topics: Int = 10
+)
 
 @Serializable
 data class TopicResponse(
@@ -234,11 +246,11 @@ data class BrainConnectionsResponse(
 
 @Serializable
 data class BrainAlertDto(
-    val id: String,
-    val title: String,
-    val message: String,
-    val urgency: String,
-    val timestamp: String
+    val id: String? = null,
+    val title: String? = null,
+    val message: String? = null,
+    val urgency: String? = null,
+    val timestamp: String? = null
 )
 
 // ── Ingest DTOs ──────────────────────────────────────────────────────────────
@@ -299,11 +311,8 @@ data class ChatRequest(val query: String)
 data class AskResponse(
     val answer: String,
     val sources: List<SourceCitationDto> = emptyList(),
-    @SerialName("model_used") val model_used: String? = null,
-    @SerialName("provider") val provider: String? = null,
-    @SerialName("usage") val usage: AIUsageDto? = null,
-    @SerialName("latency_ms") val latency_ms: Long? = null,
-    @SerialName("chunksRetrieved") val chunks_retrieved: Int = 0,
+    val model_used: String? = null,
+    val chunks_retrieved: Int = 0,
     val cached: Boolean = false,
     val question: String? = null
 )
@@ -315,10 +324,7 @@ data class QueryHistoryItem(
     val answer: String?,
     @SerialName("sources_used") val sources_used: List<SourceCitationDto>? = emptyList(),
     @SerialName("model_used") val model_used: String? = null,
-    @SerialName("provider") val provider: String? = null,
-    @SerialName("usage") val usage: AIUsageDto? = null,
-    @SerialName("latency_ms") val latency_ms: Long? = null,
-    @SerialName("created_at") val created_at: String
+    val created_at: String
 )
 
 @Serializable
@@ -329,14 +335,10 @@ data class QueryHistoryResponse(
 
 @Serializable
 data class SourceCitationDto(
-    val document_id: String,
     val source_type: String,
-    val sender: String? = "",
-    val subject: String? = "",
-    val timestamp: String? = "",
-    val content_preview: String,
-    val similarity: Float? = 0f,
-    val page_number: Int? = null
+    val title: String,
+    val snippet: String,
+    val url: String? = null
 )
 
 @Serializable
@@ -344,11 +346,7 @@ data class ChatEventDto(
     val type: String,
     val token: String? = null,
     val sources: List<SourceCitationDto>? = null,
-    val model: String? = null,
-    val provider: String? = null,
-    val usage: AIUsageDto? = null,
-    @SerialName("latency_ms") val latency_ms: Long? = null,
-    @SerialName("finish_reason") val finish_reason: String? = null
+    val model: String? = null
 )
 
 // ── Saved Items DTOs ─────────────────────────────────────────────────────────
@@ -432,7 +430,7 @@ fun DigestResponse.toDomain(): DailyDigest {
             title = "Insights",
             subtitle = "From your knowledge base",
             items = emptyList(), 
-            actionItems = action_items?.map { ActionItem(id = it, text = it, sourceType = SourceType.MANUAL) } ?: emptyList()
+            actionItems = action_items?.map { ActionItem(id = it.task ?: it.text ?: "", text = it.text ?: it.task ?: "", sourceType = SourceType.MANUAL) } ?: emptyList()
         ))
     } else {
         sections?.map { it.toDomain() } ?: emptyList()
@@ -447,6 +445,7 @@ fun DigestResponse.toDomain(): DailyDigest {
         totalItemCount = derivedTotalCount,
         sections = domainSections,
         topics = topics?.map { it.toDomain() } ?: emptyList(),
+        actionItems = action_items?.map { it.toActionItem() } ?: emptyList(),
         metadata = AIMetadata(
             model = model_used,
             provider = provider,
@@ -455,6 +454,13 @@ fun DigestResponse.toDomain(): DailyDigest {
         )
     )
 }
+
+fun DigestActionItemDto.toActionItem() = ActionItem(
+    id = task ?: text ?: "",
+    text = text ?: task ?: "",
+    sourceType = SourceType.MANUAL,
+    isCompleted = completed ?: (status == "completed")
+)
 
 fun DigestSectionDto.toDomain() = DigestSection(
     title = title,
@@ -539,11 +545,11 @@ fun BrainConnectionDto.toDomain() = BrainConnection(
 )
 
 fun BrainAlertDto.toDomain() = BrainAlert(
-    id = id,
-    title = title,
-    message = message,
-    urgency = urgency,
-    timestamp = timestamp
+    id = id ?: "",
+    title = title ?: "Alert",
+    message = message ?: "",
+    urgency = urgency ?: "medium",
+    timestamp = timestamp ?: ""
 )
 
 fun JobStatusResponse.toDomain() = IngestJob(
@@ -562,21 +568,14 @@ fun AskResponse.toDomain(id: String, sentAt: Long) = ChatMessage.Pingo(
     id = id,
     text = answer,
     sentAt = sentAt,
-    sources = sources.map { ChatSource(it.source_name_fallback(), it.source_type_to_domain()) },
+    sources = sources.map { ChatSource(it.title, it.source_type_to_domain()) },
     isStreaming = false,
     metadata = AIMetadata(
         model = model_used,
-        provider = provider,
-        usage = usage?.toDomain(),
-        latencyMs = latency_ms,
         cached = cached,
         sourcesRetrieved = chunks_retrieved
     )
 )
-
-fun SourceCitationDto.source_name_fallback(): String {
-    return sender?.takeIf { it.isNotBlank() } ?: subject?.takeIf { it.isNotBlank() } ?: "Source"
-}
 
 fun SourceCitationDto.source_type_to_domain(): SourceType {
     return try { SourceType.valueOf(source_type.uppercase()) } catch (e: Exception) { SourceType.MANUAL }

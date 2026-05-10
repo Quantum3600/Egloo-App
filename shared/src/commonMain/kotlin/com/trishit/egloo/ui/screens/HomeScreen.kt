@@ -1,6 +1,5 @@
 package com.trishit.egloo.ui.screens
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -16,7 +15,6 @@ import androidx.compose.ui.unit.*
 import com.trishit.egloo.domain.models.*
 import com.trishit.egloo.domain.viewmodels.*
 import com.trishit.egloo.ui.components.*
-import com.trishit.egloo.ui.theme.EglooColors
 import org.koin.compose.koinInject
 import org.jetbrains.compose.resources.painterResource
 import egloo.shared.generated.resources.Res
@@ -35,7 +33,7 @@ fun HomeScreen(
     val ingestState by ingestViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
     
-    val userName = settingsState.settings.userName
+    val userName = settingsState.userProfile?.full_name
 
     when {
         homeState.isLoading && homeState.digest == null -> LoadingAnimation("Pingo is reading your messages...")
@@ -55,7 +53,7 @@ fun HomeScreen(
 
 @Composable
 private fun HomeContent(
-    userName: String,
+    userName: String?,
     digest: DailyDigest?,
     isLoading: Boolean,
     brainState: BrainUiState,
@@ -78,19 +76,21 @@ private fun HomeContent(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    val firstName = if (userName == "User") "" else userName.split(" ").firstOrNull() ?: ""
+                    val firstName = if (userName == "User") "" else userName?.split(" ")
+                        ?.firstOrNull()
+                        ?: ""
                     val greetingBase = digest?.greeting?.replace(", User", "") ?: "Good morning"
                     
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceAround) {
                         Text(
-                            text = if (firstName.isNotEmpty()) "$greetingBase, $firstName ✦" else "$greetingBase ✦",
-                            style = MaterialTheme.typography.displaySmall,
+                            text = if (firstName.isNotEmpty()) "$greetingBase, $firstName" else "$greetingBase ✦",
+                            style = MaterialTheme.typography.displayMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Image(
                             painter = painterResource(Res.drawable.pingo_hi),
                             contentDescription = null,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(80.dp)
                         )
                     }
                 }

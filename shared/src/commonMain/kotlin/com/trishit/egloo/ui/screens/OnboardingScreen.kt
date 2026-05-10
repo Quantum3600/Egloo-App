@@ -71,7 +71,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             ) {
                 Text(
                     text = if (page < totalPages - 1) "Continue" else "Let's go ❄",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineMedium,
                 )
             }
 
@@ -99,14 +99,14 @@ private fun OnboardingPage(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 32.dp)
-            .padding(top = 100.dp, bottom = 200.dp),
+            .padding(top = 40.dp, bottom = 80.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         // Pingo illustration
         Box(
             modifier = Modifier
-                .size(300.dp),
+                .size(360.dp),
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -120,7 +120,7 @@ private fun OnboardingPage(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.displaySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -164,7 +164,7 @@ private fun OnboardingHowItWorks() = OnboardingPage(
 
 @Composable
 private fun OnboardingPrivacy() = OnboardingPage(
-    painter = painterResource(Res.drawable.pingo_to_egloo),
+    painter = painterResource(Res.drawable.egloo),
     title = "Your data stays yours",
     body = "Everything lives in your igloo. Your data is encrypted and never used to train AI models. Pingo works for you, not for us.",
 )
@@ -194,8 +194,8 @@ private fun HowItWorksStep(number: String, label: String) {
                 .background(EglooColors.TealPrimary),
             contentAlignment = Alignment.Center,
         ) {
-            Text(number, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary)
+            Text(number, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimary)
         }
-        Text(label, style = MaterialTheme.typography.titleMedium)
+        Text(label, style = MaterialTheme.typography.headlineMedium)
     }
 }

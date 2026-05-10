@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
@@ -171,11 +172,7 @@ fun PingoAvatar(size: Dp = 36.dp, modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "P",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
+        Icon(Icons.Default.Person, "Account")
     }
 }
 
@@ -249,7 +246,7 @@ fun SectionHeader(
 fun PingoMessageBubble(message: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.8f)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
             .padding(12.dp),
@@ -481,6 +478,7 @@ fun CeleryHealthIndicator(status: HealthStatus?, modifier: Modifier = Modifier) 
 
 // ── Loading animation (Floating Pingo) ──────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingAnimation(message: String = "Pingo is thinking...") {
     val infiniteTransition = rememberInfiniteTransition()
@@ -499,7 +497,7 @@ fun LoadingAnimation(message: String = "Pingo is thinking...") {
                 painter = painterResource(Res.drawable.pingo_med),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(200.dp)
                     .offset(y = dy.dp)
             )
             Spacer(Modifier.height(24.dp))
@@ -509,9 +507,9 @@ fun LoadingAnimation(message: String = "Pingo is thinking...") {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            CircularProgressIndicator(
+            LoadingIndicator(
                 modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp,
+                polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons,
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -531,12 +529,12 @@ fun ErrorScreen(
             Image(
                 painter = painterResource(Res.drawable.pingo_error),
                 contentDescription = null,
-                modifier = Modifier.size(140.dp)
+                modifier = Modifier.size(300.dp)
             )
             Spacer(Modifier.height(32.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground
             )

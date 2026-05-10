@@ -58,7 +58,10 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
 
     override suspend fun triggerTopicGeneration(): Result<Unit> {
         return try {
-            val response = client.post("/api/v1/topics/refresh")
+            val response = client.post("/api/v1/topics/refresh") {
+                contentType(ContentType.Application.Json)
+                setBody(com.trishit.egloo.data.api.RefreshTopicsRequest())
+            }
             if (response.status.isSuccess()) Result.success(Unit)
             else Result.failure(Exception("Failed to trigger generation: ${response.status}"))
         } catch (e: Exception) {

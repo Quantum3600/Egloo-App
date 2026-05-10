@@ -51,7 +51,7 @@ fun PingoScreen(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("🐧", fontSize = 16.sp)
+                                Image(painterResource(Res.drawable.pingo_tab_icon), "pingo")
                             }
                         }
                         Spacer(Modifier.width(12.dp))

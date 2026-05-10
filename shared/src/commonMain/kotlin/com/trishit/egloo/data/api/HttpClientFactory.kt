@@ -7,6 +7,7 @@ import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
@@ -17,6 +18,7 @@ fun createHttpClient(
 ) = HttpClient(platformEngine()) {
     defaultRequest {
         url(baseUrl)
+        header("ngrok-skip-browser-warning", "true")
     }
 
     install(ContentNegotiation) {
@@ -46,7 +48,7 @@ fun createHttpClient(
     }
 
     install(Logging) {
-        level = LogLevel.HEADERS // Use HEADERS to avoid buffering the body (which kills SSE)
+        level = LogLevel.HEADERS // Reverted to HEADERS to avoid buffering SSE body
         logger = object : Logger {
             override fun log(message: String) {
                 println("Ktor: $message")
@@ -55,8 +57,9 @@ fun createHttpClient(
     }
 
     install(HttpTimeout) {
-        requestTimeoutMillis = 30_000
-        connectTimeoutMillis = 10_000
+        requestTimeoutMillis = 60_000 // Increased for long-running AI streams
+        connectTimeoutMillis = 15_000
+        socketTimeoutMillis = 60_000
     }
 }
 
