@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.trishit.egloo.domain.viewmodels.AuthViewModel
 import org.koin.compose.koinInject
@@ -34,111 +35,118 @@ fun LoginScreen(
         mutableStateOf(false)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Welcome Back",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = "Sign in to access your second brain",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isWide = maxWidth > 600.dp
+        val contentWidth = if (isWide) 400.dp else Dp.Unspecified
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Welcome Back",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
 
-        OutlinedTextField(
-            value = state.email,
-            onValueChange = viewModel::onEmailChanged,
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            shape = RoundedCornerShape(16.dp)
-        )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Sign in to access your second brain",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
 
-        OutlinedTextField(
-            value = state.password,
-            onValueChange = viewModel::onPasswordChanged,
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            trailingIcon = {
+            Spacer(modifier = Modifier.height(32.dp))
 
-                val icon =
-                    if (passwordVisible)
-                        Icons.Default.Visibility
-                    else
-                        Icons.Default.VisibilityOff
+            OutlinedTextField(
+                value = state.email,
+                onValueChange = viewModel::onEmailChanged,
+                label = { Text("Email") },
+                modifier = Modifier.then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth()),
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                shape = RoundedCornerShape(16.dp)
+            )
 
-                IconButton(
-                    onClick = {
-                        passwordVisible = !passwordVisible
-                    }
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription =
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = state.password,
+                onValueChange = viewModel::onPasswordChanged,
+                label = { Text("Password") },
+                modifier = Modifier.then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth()),
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                trailingIcon = {
+
+                    val icon =
+                        if (passwordVisible)
+                            Icons.Default.Visibility
+                        else
+                            Icons.Default.VisibilityOff
+
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription =
                             if (passwordVisible)
                                 "Hide password"
                             else
                                 "Show password"
-                    )
-                }
-            },
-            visualTransformation = if (passwordVisible)
-                VisualTransformation.None
-            else
-                PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(16.dp)
-        )
-
-        if (state.error != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Invalid Email or Password!!",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                shape = RoundedCornerShape(16.dp)
             )
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { viewModel.login(onLoginSuccess) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank()
-        ) {
-            if (state.isLoading) {
-                LoadingIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+            if (state.error != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Invalid Email or Password!!",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-            } else {
-                Text("Sign In", style = MaterialTheme.typography.headlineMedium)
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        TextButton(onClick = onNavigateToSignUp) {
-            Text("Don't have an account? Sign Up")
+            Button(
+                onClick = { viewModel.login(onLoginSuccess) },
+                modifier = Modifier
+                    .then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth())
+                    .height(52.dp),
+                enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank()
+            ) {
+                if (state.isLoading) {
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                    )
+                } else {
+                    Text("Sign In", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = onNavigateToSignUp) {
+                Text("Don't have an account? Sign Up")
+            }
         }
     }
 }
@@ -156,122 +164,129 @@ fun SignUpScreen(
     }
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Create Account",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isWide = maxWidth > 600.dp
+        val contentWidth = if (isWide) 400.dp else Dp.Unspecified
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Create Account",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
 
-        Text(
-            text = "Join Egloo and start organizing your knowledge",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = "Join Egloo and start organizing your knowledge",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
 
-        OutlinedTextField(
-            value = state.fullName,
-            onValueChange = viewModel::onFullNameChanged,
-            label = { Text("Full Name") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            shape = RoundedCornerShape(16.dp)
-        )
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = state.fullName,
+                onValueChange = viewModel::onFullNameChanged,
+                label = { Text("Full Name") },
+                modifier = Modifier.then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth()),
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                shape = RoundedCornerShape(16.dp)
+            )
 
-        OutlinedTextField(
-            value = state.email,
-            onValueChange = viewModel::onEmailChanged,
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            shape = RoundedCornerShape(16.dp)
-        )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = state.email,
+                onValueChange = viewModel::onEmailChanged,
+                label = { Text("Email") },
+                modifier = Modifier.then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth()),
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                shape = RoundedCornerShape(16.dp)
+            )
 
-        OutlinedTextField(
-            value = state.password,
-            onValueChange = viewModel::onPasswordChanged,
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            trailingIcon = {
+            Spacer(modifier = Modifier.height(16.dp))
 
-                val icon =
-                    if (passwordVisible)
-                        Icons.Default.Visibility
-                    else
-                        Icons.Default.VisibilityOff
+            OutlinedTextField(
+                value = state.password,
+                onValueChange = viewModel::onPasswordChanged,
+                label = { Text("Password") },
+                modifier = Modifier.then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth()),
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                trailingIcon = {
 
-                IconButton(
-                    onClick = {
-                        passwordVisible = !passwordVisible
-                    }
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription =
+                    val icon =
+                        if (passwordVisible)
+                            Icons.Default.Visibility
+                        else
+                            Icons.Default.VisibilityOff
+
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                        }
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription =
                             if (passwordVisible)
                                 "Hide password"
                             else
                                 "Show password"
-                    )
-                }
-            },
-            visualTransformation = if (passwordVisible)
-                VisualTransformation.None
-            else
-                PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(16.dp)
-        )
-
-        if (state.error != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = state.error!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                shape = RoundedCornerShape(16.dp)
             )
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { viewModel.register(onSignUpSuccess) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank() && state.fullName.isNotBlank()
-        ) {
-            if (state.isLoading) {
-                LoadingIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+            if (state.error != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = state.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-            } else {
-                Text("Create Account", style = MaterialTheme.typography.headlineMedium)
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Sign In")
+            Button(
+                onClick = { viewModel.register(onSignUpSuccess) },
+                modifier = Modifier
+                    .then(if (isWide) Modifier.width(contentWidth) else Modifier.fillMaxWidth())
+                    .height(52.dp),
+                enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank() && state.fullName.isNotBlank()
+            ) {
+                if (state.isLoading) {
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                    )
+                } else {
+                    Text("Create Account", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = onNavigateToLogin) {
+                Text("Already have an account? Sign In")
+            }
         }
     }
 }
