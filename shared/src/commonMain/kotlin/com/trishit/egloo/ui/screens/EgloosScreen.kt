@@ -22,7 +22,7 @@ fun EgloosScreen(
     onNavigateToPdfUpload: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Topics", "Connections", "Sources")
+    val tabs = listOf("Sources", "Connections", "Topics")
     var showCreateTopicDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -43,7 +43,7 @@ fun EgloosScreen(
             }
         },
         floatingActionButton = {
-            if (selectedTab == 0) {
+            if (selectedTab == 2) {
                 // Topics Actions
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FloatingActionButton(
@@ -66,12 +66,12 @@ fun EgloosScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTab) {
-                0 -> TopicsScreen(topicsViewModel)
-                1 -> ConnectionsScreen(brainViewModel)
-                2 -> SourcesScreen(
+                0 -> SourcesScreen(
                     viewModel = sourcesViewModel,
                     onNavigateToPdfUpload = onNavigateToPdfUpload
                 )
+                1 -> ConnectionsScreen(brainViewModel)
+                2 -> TopicsScreen(topicsViewModel)
             }
         }
     }

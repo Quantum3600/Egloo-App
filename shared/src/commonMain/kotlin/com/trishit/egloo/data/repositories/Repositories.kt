@@ -67,7 +67,7 @@ interface SavedRepository {
 
 interface PdfRepository {
     fun getUploadedPdfs(): Flow<List<UploadedPdf>>
-    suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<UploadedPdf>
+    suspend fun uploadPdf(filename: String, fileBytes: ByteArray): Result<Pair<UploadedPdf, String?>> // Return PDF and JobId
     suspend fun deletePdf(pdfId: String): Result<Unit>
     suspend fun reindexPdf(pdfId: String): Result<Unit>
 }

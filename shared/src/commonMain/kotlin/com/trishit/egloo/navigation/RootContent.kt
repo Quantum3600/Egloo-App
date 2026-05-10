@@ -1,6 +1,7 @@
 package com.trishit.egloo.navigation
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -10,9 +11,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.*
@@ -279,10 +282,11 @@ fun EglooNavRail(
         header = {
             Spacer(Modifier.height(16.dp))
             // Pingo wordmark
-            Text(
-                "eg",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
+            Image(
+                painter = painterResource(Res.drawable.egloo),
+                contentDescription = "wordmark",
+                modifier = Modifier.size(56.dp),
+                contentScale = ContentScale.Crop
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -297,7 +301,7 @@ fun EglooNavRail(
                     Icon(
                         painter = painterResource(item.iconRes),
                         contentDescription = item.label,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(34.dp)
                     )
                 },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },

@@ -16,8 +16,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class SettingsRepositoryImpl(
-    private val settings: Settings,
-    private val client: HttpClient
+    private val settings: Settings
 ) : SettingsRepository {
     private val json = Json { ignoreUnknownKeys = true }
     private val key = "app_settings"
@@ -27,32 +26,13 @@ class SettingsRepositoryImpl(
     override fun getSettings(): Flow<AppSettings> = _settingsFlow
 
     override suspend fun updateSettings(settings: AppSettings) {
-        // Save locally first for responsiveness
+        // Save locally only as per backend constraints
         this.settings[key] = json.encodeToString(settings)
         _settingsFlow.value = settings
-
-        // Sync with backend
-        try {
-            client.put("/api/v1/settings") {
-                contentType(ContentType.Application.Json)
-                setBody(settings.toDto())
-            }
-        } catch (e: Exception) {
-            // Log sync failure, could implement retry
-        }
     }
 
     suspend fun fetchRemoteSettings() {
-        try {
-            val response = client.get("/api/v1/settings")
-            if (response.status.isSuccess()) {
-                val remoteSettings = response.body<AppSettingsDto>().toDomain()
-                this.settings[key] = json.encodeToString(remoteSettings)
-                _settingsFlow.value = remoteSettings
-            }
-        } catch (e: Exception) {
-            // Fallback to local
-        }
+        // No-op: Settings are local-only as per backend contract
     }
 
     private fun loadSettings(): AppSettings {

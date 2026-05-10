@@ -73,6 +73,43 @@ fun SourceDot(type: SourceType, modifier: Modifier = Modifier) {
     )
 }
 
+// ── Source Logo Icon (Circular) ──────────────────────────────────────────────
+
+@Composable
+fun SourceLogoIcon(type: SourceType, size: Dp = 32.dp, modifier: Modifier = Modifier) {
+    val painter = when (type) {
+        SourceType.GMAIL -> painterResource(Res.drawable.gmail)
+        SourceType.SLACK -> painterResource(Res.drawable.slack)
+        SourceType.GOOGLE_DRIVE, SourceType.DRIVE -> painterResource(Res.drawable.drive)
+        SourceType.NOTION -> painterResource(Res.drawable.notion)
+        SourceType.PDF -> painterResource(Res.drawable.pdf)
+        else -> null
+    }
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        if (painter != null) {
+            Image(
+                painter = painter,
+                contentDescription = type.displayName,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                modifier = Modifier.size(size * 0.6f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 // ── Knowledge item card ───────────────────────────────────────────────────────
 
 @Composable

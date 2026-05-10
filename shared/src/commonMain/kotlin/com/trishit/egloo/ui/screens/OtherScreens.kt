@@ -345,8 +345,8 @@ fun SourcesScreen(
                 isConnecting = state.connectingSourceId == row.sourceId,
                 onConnect = { viewModel.connectSource(row.sourceId) },
                 onDisconnect = { viewModel.disconnectSource(row.sourceId) },
-                onSync = { ingestViewModel.triggerSourceSync(row.sourceId) },
-                isSyncing = ingestState.activeJobs.any { it.sourceId == row.sourceId || it.sourceType == row.sourceId }
+                onSync = { row.connectedSource?.id?.let { ingestViewModel.triggerSourceSync(it) } },
+                isSyncing = ingestState.activeJobs.any { it.sourceId == row.connectedSource?.id }
             )
         }
 
@@ -373,7 +373,7 @@ private fun SourceRowWithAvailable(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SourceDot(
+            SourceLogoIcon(
                 when (sourceRow.sourceId) {
                     "gmail" -> SourceType.GMAIL
                     "slack" -> SourceType.SLACK
@@ -382,7 +382,7 @@ private fun SourceRowWithAvailable(
                     "pdf" -> SourceType.PDF
                     else -> SourceType.MANUAL
                 },
-                modifier = Modifier.size(10.dp)
+                size = 36.dp
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -513,44 +513,6 @@ fun SettingsScreen(
                     hours = settings.syncFrequencyHours,
                     onSelect = viewModel::setSyncFrequency,
                 )
-            }
-        }
-
-        item {
-            SettingsSection("Intelligence") {
-                Text("Preferred AI Model", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Select which brain Pingo uses to process your data",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
-                
-                val models = listOf(
-                    "gemini-1.5-pro" to "Gemini 1.5 Pro (Balanced)",
-                    "llama-3-70b-groq" to "Llama 3 70B (Fast)",
-                    "gpt-4o" to "GPT-4o (Premium)"
-                )
-                
-                models.forEach { (id, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = settings.preferredLlmModel == id,
-                                onClick = { viewModel.setPreferredLlmModel(id) }
-                            )
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = settings.preferredLlmModel == id,
-                            onClick = { viewModel.setPreferredLlmModel(id) }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(label, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
             }
         }
 

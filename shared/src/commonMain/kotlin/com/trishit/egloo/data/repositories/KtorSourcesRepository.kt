@@ -2,6 +2,7 @@ package com.trishit.egloo.data.repositories
 
 import com.trishit.egloo.data.api.SourceListResponse
 import com.trishit.egloo.data.api.SourceResponse
+import com.trishit.egloo.data.api.safeParse
 import com.trishit.egloo.data.api.toDomain
 import com.trishit.egloo.domain.models.ConnectedSource
 import com.trishit.egloo.domain.models.SourceType
@@ -18,24 +19,16 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
     override fun getConnectedSources(): Flow<List<ConnectedSource>> = flow {
         try {
             val response = client.get("/api/v1/sources")
-            if (response.status.value == 200) {
-                val sources = try {
-                    val wrapped = response.body<com.trishit.egloo.data.api.EglooResponse<List<SourceResponse>>>()
-                    wrapped.getOrNull() ?: try {
-                        response.body<List<SourceResponse>>()
-                    } catch (_: Exception) {
-                        response.body<SourceListResponse>().sources
-                    }
-                } catch (e: Exception) {
-                    try {
-                        response.body<List<SourceResponse>>()
-                    } catch (_: Exception) {
-                        response.body<SourceListResponse>().sources
-                    }
-                }
+            response.safeParse<List<SourceResponse>>().onSuccess { sources ->
                 emit(sources.map { it.toDomain() })
-            } else {
-                emit(emptyList())
+            }.onFailure {
+                // Fallback for wrapped response if necessary
+                val wrappedResponse = client.get("/api/v1/sources")
+                wrappedResponse.safeParse<SourceListResponse>().onSuccess { wrapped ->
+                    emit(wrapped.sources.map { it.toDomain() })
+                }.onFailure {
+                    emit(emptyList())
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -63,14 +56,7 @@ class KtorSourcesRepository(private val client: HttpClient) : SourcesRepository 
             val oauthUrl = when (response.status.value) {
                 200 -> {
                     // Backend returns JSON { "oauthUrl": "..." }
-                    try {
-                        val body = response.body<Map<String, String>>()
-                        body["oauthUrl"]
-                    } catch (e: Exception) {
-                        // Fallback if it's not JSON but 200 (unlikely for an API, but for safety)
-                        println("Failed to parse 200 OK body as JSON for $typeStr: ${e.message}")
-                        null
-                    }
+                    response.safeParse<Map<String, String>>().getOrNull()?.get("oauthUrl")
                 }
                 301, 302, 303, 307, 308 -> {
                     // Backend returns a redirect to the provider

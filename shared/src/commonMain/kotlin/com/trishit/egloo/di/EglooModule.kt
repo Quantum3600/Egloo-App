@@ -1,14 +1,17 @@
 package com.trishit.egloo.di
 
+import coil3.SingletonImageLoader.get
 import com.russhwolf.settings.Settings
 import com.trishit.egloo.data.api.createHttpClient
 import com.trishit.egloo.domain.viewmodels.*
 import com.trishit.egloo.data.repositories.*
 import com.trishit.egloo.platform.createSettings
+import kotlinx.coroutines.NonCancellable.get
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
+import kotlin.coroutines.EmptyCoroutineContext.get
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EglooModule
@@ -50,12 +53,12 @@ val eglooModule = module {
     // ── ViewModels ────────────────────────────────────────────────────────────
     factoryOf(::AuthViewModel)
     factoryOf(::HomeViewModel)
-    factory { ChatViewModel(get(), get()) }
+    factory { ChatViewModel(get()) }
     factoryOf(::TopicsViewModel)
     factoryOf(::SourcesViewModel)
     factoryOf(::SettingsViewModel)
     factoryOf(::SavedViewModel)
-    factory { PdfViewModel(get(), get()) }
+    factory { PdfViewModel(get(), get(), get()) }
     factoryOf(::BrainViewModel)
     single { IngestViewModel(get(), get()) }  // Changed to single to prevent multiple health monitoring loops
     factoryOf(::NotificationViewModel)

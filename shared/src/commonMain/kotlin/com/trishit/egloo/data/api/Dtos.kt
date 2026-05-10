@@ -300,8 +300,7 @@ data class JobListResponse(
 @Serializable
 data class AskRequest(
     val question: String,
-    val use_cache: Boolean = true,
-    val model: String? = null
+    val use_cache: Boolean = true
 )
 
 @Serializable
@@ -336,9 +335,14 @@ data class QueryHistoryResponse(
 @Serializable
 data class SourceCitationDto(
     val source_type: String,
-    val title: String,
-    val snippet: String,
-    val url: String? = null
+    val title: String? = null,
+    val subject: String? = null,
+    val snippet: String? = null,
+    val content_preview: String? = null,
+    val url: String? = null,
+    val document_id: String? = null,
+    val sender: String? = null,
+    val timestamp: String? = null
 )
 
 @Serializable
@@ -379,8 +383,7 @@ data class AppSettingsDto(
     val dark_theme: Boolean,
     val pingo_greetings_enabled: Boolean,
     val digest_notifications_enabled: Boolean,
-    val sync_frequency_hours: Int,
-    val preferred_llm_model: String = "gemini-1.5-pro"
+    val sync_frequency_hours: Int
 )
 
 // ── Mappers ──────────────────────────────────────────────────────────────────
@@ -390,8 +393,7 @@ fun AppSettingsDto.toDomain() = AppSettings(
     darkTheme = dark_theme,
     pingoGreetingsEnabled = pingo_greetings_enabled,
     digestNotificationsEnabled = digest_notifications_enabled,
-    syncFrequencyHours = sync_frequency_hours,
-    preferredLlmModel = preferred_llm_model
+    syncFrequencyHours = sync_frequency_hours
 )
 
 fun AppSettings.toDto() = AppSettingsDto(
@@ -399,8 +401,7 @@ fun AppSettings.toDto() = AppSettingsDto(
     dark_theme = darkTheme,
     pingo_greetings_enabled = pingoGreetingsEnabled,
     digest_notifications_enabled = digestNotificationsEnabled,
-    sync_frequency_hours = syncFrequencyHours,
-    preferred_llm_model = preferredLlmModel
+    sync_frequency_hours = syncFrequencyHours
 )
 
 fun DigestResponse.toDomain(): DailyDigest {
@@ -568,13 +569,18 @@ fun AskResponse.toDomain(id: String, sentAt: Long) = ChatMessage.Pingo(
     id = id,
     text = answer,
     sentAt = sentAt,
-    sources = sources.map { ChatSource(it.title, it.source_type_to_domain()) },
+    sources = sources.map { it.toDomain() },
     isStreaming = false,
     metadata = AIMetadata(
         model = model_used,
         cached = cached,
         sourcesRetrieved = chunks_retrieved
     )
+)
+
+fun SourceCitationDto.toDomain() = ChatSource(
+    label = title ?: subject ?: document_id ?: "Source",
+    type = source_type_to_domain()
 )
 
 fun SourceCitationDto.source_type_to_domain(): SourceType {
@@ -600,14 +606,10 @@ fun AvailableSourceDto.toDomain() = AvailableSource(
 )
 
 fun PdfUploadResponse.toDomain() = UploadedPdf(
-    id = id ?: document_id ?: "",
+    id = id ?: document_id ?: job_id ?: "",
     filename = filename ?: "document.pdf",
     pages = pages ?: 0,
-    status = status ?: when {
-        chunks_created != null -> "indexed"
-        job_id != null -> "processing"
-        else -> "processing"
-    },
+    status = status ?: "processing",
     uploadedAt = uploaded_at ?: "Just now",
     fileSize = file_size ?: 0,
     errorMessage = error_message

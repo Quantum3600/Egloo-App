@@ -64,14 +64,11 @@ data class ChatUiState(
 )
 
 class ChatViewModel(
-    private val chatRepo: ChatRepository,
-    private val settingsRepo: SettingsRepository
+    private val chatRepo: ChatRepository
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
-
-    private var preferredModel: String? = null
 
     init {
         scope.launch {
@@ -87,11 +84,6 @@ class ChatViewModel(
                 _uiState.update { it.copy(suggestions = suggestions) }
             }
         }
-        scope.launch {
-            settingsRepo.getSettings().collect { settings ->
-                preferredModel = settings.preferredLlmModel
-            }
-        }
     }
 
     fun onInputChanged(text: String) {
@@ -103,7 +95,7 @@ class ChatViewModel(
         if (trimmedText.isBlank()) return
         _uiState.update { it.copy(isSending = true, isTyping = true) }
         scope.launch {
-            chatRepo.sendMessage(trimmedText, preferredModel)
+            chatRepo.sendMessage(trimmedText, null)
             _uiState.update { it.copy(isSending = false, isTyping = false) }
         }
     }
@@ -372,7 +364,6 @@ class SettingsViewModel(
     fun togglePingoGreetings(enabled: Boolean) = update { it.copy(pingoGreetingsEnabled = enabled) }
     fun toggleDigestNotifications(enabled: Boolean) = update { it.copy(digestNotificationsEnabled = enabled) }
     fun setSyncFrequency(hours: Int) = update { it.copy(syncFrequencyHours = hours) }
-    fun setPreferredLlmModel(model: String) = update { it.copy(preferredLlmModel = model) }
 
     private fun update(block: (AppSettings) -> AppSettings) {
         scope.launch {
@@ -549,9 +540,9 @@ class IngestViewModel(
         }
     }
 
-    fun triggerSourceSync(sourceId: String) {
+    fun triggerSourceSync(uuid: String) {
         scope.launch {
-            ingestRepo.triggerIngest(sourceId).onSuccess { jobId ->
+            ingestRepo.triggerIngest(uuid).onSuccess { jobId ->
                 _uiState.update { it.copy(error = null) }
                 loadJobs()
                 // Poll this job until complete

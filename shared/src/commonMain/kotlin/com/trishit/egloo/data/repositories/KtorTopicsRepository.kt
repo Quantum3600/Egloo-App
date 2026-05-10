@@ -1,10 +1,11 @@
 package com.trishit.egloo.data.repositories
 
+import com.trishit.egloo.data.api.TopicListResponse
 import com.trishit.egloo.data.api.TopicResponse
+import com.trishit.egloo.data.api.safeParse
 import com.trishit.egloo.data.api.toDomain
 import com.trishit.egloo.domain.models.Topic
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
@@ -18,13 +19,19 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
     override fun getTopics(): Flow<List<Topic>> = flow {
         try {
             val response = client.get("/api/v1/topics")
-            if (response.status.value == 200) {
-                val topics = response.body<List<TopicResponse>>()
-                emit(topics.map { it.toDomain() })
-            } else {
-                emit(emptyList())
+            response.safeParse<TopicListResponse>().onSuccess { wrapped ->
+                emit(wrapped.topics.map { it.toDomain() })
+            }.onFailure {
+                // Fallback for direct list if necessary
+                val directResponse = client.get("/api/v1/topics")
+                directResponse.safeParse<List<TopicResponse>>().onSuccess { list ->
+                    emit(list.map { it.toDomain() })
+                }.onFailure {
+                    emit(emptyList())
+                }
             }
         } catch (e: Exception) {
+            println("KtorTopicsRepository: Error fetching topics: ${e.message}")
             emit(emptyList())
         }
     }
@@ -32,10 +39,9 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
     override fun getTopicById(id: String): Flow<Topic?> = flow {
         try {
             val response = client.get("/api/v1/topics/$id")
-            if (response.status.value == 200) {
-                val dto = response.body<TopicResponse>()
+            response.safeParse<TopicResponse>().onSuccess { dto ->
                 emit(dto.toDomain())
-            } else {
+            }.onFailure {
                 emit(null)
             }
         } catch (e: Exception) {
@@ -50,7 +56,7 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
                 setBody(CreateTopicRequest(name, summary))
             }
             if (response.status.isSuccess()) Result.success(Unit)
-            else Result.failure(Exception("Failed to create topic: ${response.status}"))
+            else response.safeParse<Unit>().map { Unit }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -63,7 +69,7 @@ class KtorTopicsRepository(private val client: HttpClient) : TopicsRepository {
                 setBody(com.trishit.egloo.data.api.RefreshTopicsRequest())
             }
             if (response.status.isSuccess()) Result.success(Unit)
-            else Result.failure(Exception("Failed to trigger generation: ${response.status}"))
+            else response.safeParse<Unit>().map { Unit }
         } catch (e: Exception) {
             Result.failure(e)
         }

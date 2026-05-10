@@ -48,7 +48,7 @@ fun createHttpClient(
     }
 
     install(Logging) {
-        level = LogLevel.HEADERS // Reverted to HEADERS to avoid buffering SSE body
+        level = LogLevel.INFO // Reset to INFO since we are not using streams anymore
         logger = object : Logger {
             override fun log(message: String) {
                 println("Ktor: $message")
@@ -57,9 +57,9 @@ fun createHttpClient(
     }
 
     install(HttpTimeout) {
-        requestTimeoutMillis = 60_000 // Increased for long-running AI streams
-        connectTimeoutMillis = 15_000
-        socketTimeoutMillis = 60_000
+        requestTimeoutMillis = 300_000 // Increased to 5 minutes for long-running AI streams
+        connectTimeoutMillis = 30_000
+        socketTimeoutMillis = 300_000
     }
 }
 

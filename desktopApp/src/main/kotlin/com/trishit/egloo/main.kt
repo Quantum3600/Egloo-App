@@ -4,6 +4,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -50,6 +51,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         state          = windowState,
         title          = "Egloo",
+        icon           = painterResource("icon.ico")
     ) {
         KoinContext {
             val settingsRepo = koinInject<SettingsRepository>()

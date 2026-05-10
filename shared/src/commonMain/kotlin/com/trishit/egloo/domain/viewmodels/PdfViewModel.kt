@@ -1,15 +1,12 @@
 package com.trishit.egloo.domain.viewmodels
 
 import com.russhwolf.settings.Settings
+import com.trishit.egloo.data.repositories.IngestRepository
 import com.trishit.egloo.data.repositories.PdfRepository
 import com.trishit.egloo.domain.models.UploadedPdf
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -31,6 +28,7 @@ data class PdfUiState(
 
 class PdfViewModel(
     private val pdfRepo: PdfRepository,
+    private val ingestRepo: IngestRepository,
     private val settings: Settings
 ) : BaseViewModel() {
 
@@ -102,8 +100,8 @@ class PdfViewModel(
             println("PdfViewModel: Launching repository upload request...")
             val result = pdfRepo.uploadPdf(filename, fileBytes)
 
-            result.onSuccess { pdf ->
-                println("PdfViewModel: Upload success! ID: ${pdf.id}, Status: ${pdf.status}")
+            result.onSuccess { (pdf, jobId) ->
+                println("PdfViewModel: Upload success! ID: ${pdf.id}, JobID: $jobId, Status: ${pdf.status}")
                 
                 // Add to local list and persist IMMEDIATELY
                 val updatedPdf = pdf.copy(
@@ -122,54 +120,18 @@ class PdfViewModel(
                     )
                 }
 
-                delay(1500)
-
-                // Check final status from backend (local simulation if status is null)
-                val finalStatus = when (pdf.status) {
-                    "processing" -> {
-                        _uiState.update { it.copy(uploadProgress = 75) }
-                        delay(1000)
-                        PdfProgressStatus.PROCESSING
+                if (jobId != null) {
+                    pollPdfStatus(jobId, pdf.id)
+                } else {
+                    // Fallback to old behavior if no jobId returned
+                    delay(1500)
+                    val finalStatus = when (pdf.status) {
+                        "processing" -> PdfProgressStatus.PROCESSING
+                        "indexed" -> PdfProgressStatus.INDEXED
+                        "failed" -> PdfProgressStatus.FAILED
+                        else -> PdfProgressStatus.INDEXED
                     }
-                    "indexed" -> {
-                        _uiState.update { it.copy(uploadProgress = 100) }
-                        PdfProgressStatus.INDEXED
-                    }
-                    "failed" -> PdfProgressStatus.FAILED
-                    else -> PdfProgressStatus.INDEXED // Assume success for frontend display if response was 200
-                }
-                
-                println("PdfViewModel: Final status mapped to $finalStatus")
-
-                _uiState.update { state ->
-                    val newList = state.uploadedPdfs.map { 
-                        if (it.id == pdf.id) it.copy(status = if (finalStatus == PdfProgressStatus.INDEXED) "indexed" else it.status)
-                        else it
-                    }
-                    persistPdfs(newList)
-                    state.copy(
-                        uploadedPdfs = newList,
-                        uploadStatus = finalStatus,
-                        statusMessage = when (finalStatus) {
-                            PdfProgressStatus.INDEXED -> "Ready to search!"
-                            PdfProgressStatus.FAILED -> "Processing failed"
-                            else -> pdf.status
-                        }
-                    )
-                }
-
-                // Auto-dismiss after 2 seconds if success
-                if (finalStatus == PdfProgressStatus.INDEXED) {
-                    delay(2000)
-                    _uiState.update {
-                        it.copy(
-                            isUploading = false,
-                            errorMessage = null,
-                            uploadProgress = 0,
-                            uploadStatus = PdfProgressStatus.IDLE,
-                            statusMessage = ""
-                        )
-                    }
+                    updatePdfStatus(pdf.id, finalStatus, pdf.status)
                 }
             }
 
@@ -190,6 +152,67 @@ class PdfViewModel(
                         errorMessage = errorMsg,
                         isUploading = false,
                         uploadProgress = 0
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun pollPdfStatus(jobId: String, pdfId: String) {
+        var pollCount = 0
+        val maxPolls = 60 // 2 minutes at 2s interval
+        var isComplete = false
+
+        while (!isComplete && pollCount < maxPolls) {
+            delay(2000)
+            pollCount++
+
+            try {
+                ingestRepo.getJobStatus(jobId).firstOrNull()?.let { job ->
+                    println("PdfViewModel: Polling job $jobId status: ${job.status}, progress: ${job.progress}%")
+                    
+                    _uiState.update { it.copy(uploadProgress = 50 + (job.progress / 2)) }
+
+                    when (job.status) {
+                        "success" -> {
+                            updatePdfStatus(pdfId, PdfProgressStatus.INDEXED, "Ready to search!")
+                            isComplete = true
+                        }
+                        "failed" -> {
+                            updatePdfStatus(pdfId, PdfProgressStatus.FAILED, job.error ?: "Processing failed")
+                            isComplete = true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("PdfViewModel: Polling error: ${e.message}")
+            }
+        }
+    }
+
+    private fun updatePdfStatus(pdfId: String, status: PdfProgressStatus, message: String) {
+        _uiState.update { state ->
+            val newList = state.uploadedPdfs.map { 
+                if (it.id == pdfId) it.copy(status = if (status == PdfProgressStatus.INDEXED) "indexed" else it.status)
+                else it
+            }
+            persistPdfs(newList)
+            state.copy(
+                uploadedPdfs = newList,
+                uploadStatus = status,
+                statusMessage = message,
+                uploadProgress = if (status == PdfProgressStatus.INDEXED) 100 else state.uploadProgress
+            )
+        }
+
+        if (status == PdfProgressStatus.INDEXED) {
+            scope.launch {
+                delay(2000)
+                _uiState.update {
+                    it.copy(
+                        isUploading = false,
+                        uploadStatus = PdfProgressStatus.IDLE,
+                        statusMessage = ""
                     )
                 }
             }
